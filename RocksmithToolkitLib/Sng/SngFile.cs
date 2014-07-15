@@ -735,11 +735,9 @@ namespace RocksmithToolkitLib.Sng
         }
 
         public SngFile(string file)
-        {
-            _filePath = file;
-
-            using (var stream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read))
-            {
+			: this(new FileStream (file, FileMode.Open, FileAccess.Read, FileShare.Read))
+		{}
+		public SngFile(Stream stream) {
                 BinaryReader br = new BinaryReader(stream);
                 Version = br.ReadInt32();
                 _beatCount = br.ReadInt32();
@@ -825,13 +823,18 @@ namespace RocksmithToolkitLib.Sng
                 int endLength = (int)(br.BaseStream.Length - br.BaseStream.Position);
                 _unknown2 = br.ReadBytes(endLength);
 
-            }
+            
         }
 
-        public void Write(string file)
+		public void Write(string file) {
+			using (var stream = new FileStream(file, FileMode.Create, FileAccess.Write, FileShare.None))
+			{
+				Write(stream);
+			}
+		}
+		public void Write(Stream stream)
         {
-            using (var stream = new FileStream(file, FileMode.Create, FileAccess.Write, FileShare.None))
-            {
+          
                 BinaryWriter bw = new BinaryWriter(stream);
                 bw.Write(Version);
                 bw.Write(_beatCount);
@@ -905,7 +908,7 @@ namespace RocksmithToolkitLib.Sng
                 bw.Write(_unknown2);
 
             }
-        }
+        
     }
 
     public class PhraseIterationInfo

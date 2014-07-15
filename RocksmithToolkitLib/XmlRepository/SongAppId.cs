@@ -6,7 +6,7 @@ using System.Xml.Serialization;
 using RocksmithToolkitLib;
 
 namespace RocksmithToolkitLib {
-    public class SongAppId {
+	public class SongAppId {
         [XmlAttribute("Version")]
         public GameVersion GameVersion { get; set; }
         [XmlAttribute]
