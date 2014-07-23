@@ -229,7 +229,11 @@ namespace RocksmithToolkitLib.Xml {
         }
 
         public static Song2014 LoadFromFile(string xmlSongRS2014File) {
-            using (var reader = new StreamReader(xmlSongRS2014File))
+			return LoadFromFile(File.OpenRead(xmlSongRS2014File));
+		}
+
+		public static Song2014 LoadFromFile(Stream xmlSongRS2014Stream) {
+			using (var reader = new StreamReader(xmlSongRS2014Stream))
             {
                 return new XmlStreamingDeserializer<Song2014>(reader).Deserialize();
             }

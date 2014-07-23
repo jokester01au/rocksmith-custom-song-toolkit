@@ -14,5 +14,5 @@ namespace RocksmithToolkitLib.DLCPackage
         public string SongDisplayName { get; set; }
         public string SongDisplayNameSort { get; set; }
         public int SongYear { get; set; }
-    }
+	}
 }

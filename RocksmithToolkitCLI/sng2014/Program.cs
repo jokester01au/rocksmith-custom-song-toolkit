@@ -21,6 +21,7 @@ namespace sng2014
         public bool Unpack;
         public bool Xml2Sng;
         public bool Sng2Xml;
+        public bool DifficultyRemoval;
         public string[] Input;
         public string[] Manifest;
         public ArrangementType ArrangementType;
@@ -46,7 +47,8 @@ namespace sng2014
                 { "i|input|sng=", "The input SNG file(s) or directory [*.sng] (multiple allowed, use ; to split paths)", v => outputArguments.Input = v.Split( new[]{';'}, 2) },
                 { "m|manifest=", "The input manifest arrangement file [*.json] (multiple allowed, use ; to split paths in same order of input (SNG) files)", v => outputArguments.Manifest = v.Split( new[]{';'}, 2) },
                 { "a|type|arrangement=", "Arrangement type of the SNG [Guitar, Bass, Vocal]", v => outputArguments.SetArrangementType(v) },
-                { "f|platform=", "Platform to pack/unpack SNG [Pc, Mac, XBox360, PS3]", v => outputArguments.SetPlatform(v) }
+                { "f|platform=", "Platform to pack/unpack SNG [Pc, Mac, XBox360, PS3]", v => outputArguments.SetPlatform(v) },
+                { "d|difficulty", "Remove difficulty levels", v => outputArguments.DifficultyRemoval = true }
             };
         }
 
@@ -126,7 +128,8 @@ namespace sng2014
                             continue;
                         }
                     }
-                    
+
+                   
                     if (arguments.Pack || arguments.Unpack) {
                         var outputFile = Path.Combine(Path.GetDirectoryName(inputFile), String.Format("{0}_{1}.sng", Path.GetFileNameWithoutExtension(inputFile), (arguments.Unpack) ? "decrypted" : "encrypted"));
                         
@@ -143,7 +146,11 @@ namespace sng2014
                             att = Manifest2014<Attributes2014>.LoadFromFile(arguments.Manifest[indexCount]).Entries.ToArray()[0].Value.ToArray()[0].Value;
 
                         var sng = Sng2014File.LoadFromFile(inputFile, new Platform(arguments.Platform, GameVersion.RS2014));
-
+                        if (arguments.DifficultyRemoval)
+                        {
+                            DifficultyRemover.RemoveDifficulty(sng, -1);
+                            
+                        }
                         var outputFile = Path.Combine(Path.GetDirectoryName(inputFile), String.Format("{0}.xml", Path.GetFileNameWithoutExtension(inputFile)));
                         using (FileStream outputStream = new FileStream(outputFile, FileMode.Create, FileAccess.ReadWrite))
                         {

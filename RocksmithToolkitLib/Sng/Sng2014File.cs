@@ -384,5 +384,6 @@ namespace RocksmithToolkitLib.Sng2014HSL
             else
                 throw new System.Exception("Unknown or unaccessible property");
         }
+
     }
 }

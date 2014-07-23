@@ -99,7 +99,7 @@ namespace RocksmithToolkitLib.DLCPackage.Manifest.Tone
         {
             List<Tone2014> tones = new List<Tone2014>();
 
-            Attributes2014 jsonManifestAttributes = Manifest2014<Attributes2014>.LoadFromFile(manifestFilePath).Entries.ToArray()[0].Value.ToArray()[0].Value;
+			Attributes2014 jsonManifestAttributes = Manifest2014<Attributes2014>.LoadFromFile(manifestFilePath).Entries.ToArray()[0].Value.ToArray()[0].Value;
             if (jsonManifestAttributes.ArrangementName != ArrangementName.Vocals.ToString() && jsonManifestAttributes.Tones != null)
                 tones.AddRange(jsonManifestAttributes.Tones);
 

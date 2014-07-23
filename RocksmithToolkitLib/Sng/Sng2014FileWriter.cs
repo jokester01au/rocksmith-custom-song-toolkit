@@ -9,17 +9,22 @@ using RocksmithToolkitLib.Properties;
 using System.Xml.Serialization;
 using System.Text;
 using System.Linq;
+using RocksmithToolkitLib.Extensions;
 
 namespace RocksmithToolkitLib.Sng2014HSL
 {
     public class Sng2014FileWriter {
         private static readonly int[] StandardMidiNotes = { 40, 45, 50, 55, 59, 64 };
 
-        public static Sng2014File ReadVocals(string xmlFile)
+		public static Sng2014File ReadVocals(string xmlFile) {
+			return ReadVocals(File.OpenRead(xmlFile));
+		}
+
+		public static Sng2014File ReadVocals(Stream xmlData)
         {
             var data = new MemoryStream(Resources.VOCALS_RS2);
             var sng = new Sng2014File(data);
-            var xml = Vocals.LoadFromFile(xmlFile);
+			var xml = new XmlStreamingDeserializer<Vocals>(new StreamReader(xmlData)).Deserialize();
             Sng2014FileWriter.parseVocals(xml, sng);
             return sng;
         }

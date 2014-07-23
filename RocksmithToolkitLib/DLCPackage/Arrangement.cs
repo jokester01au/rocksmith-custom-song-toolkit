@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.IO;
 using System.Text;
 using RocksmithToolkitLib.DLCPackage;
 using RocksmithToolkitLib.DLCPackage.AggregateGraph;
@@ -62,16 +63,18 @@ namespace RocksmithToolkitLib.DLCPackage
             MasterId = ArrangementType == Sng.ArrangementType.Vocal ? 1 : RandomGenerator.NextInt();
         }
 
-        public Arrangement(Attributes2014 attr, string xmlSongFile)
+        public Arrangement(Attributes2014 attr, string xmlSongFile, Stream xmlSongData)// FIXME : this(attr, Sng2014File.ConvertXML(xmlSongData))
         {
-            var song = Song2014.LoadFromFile(xmlSongFile);
-
             this.SongFile = new SongFile();
             this.SongFile.File = "";
 
             this.SongXml = new SongXML();
             this.SongXml.File = xmlSongFile;
 
+        }
+
+        public Arrangement(Attributes2014 attr, Sng2014File song) {
+           
             bool isBass = false;
             TuningDefinition tuning = null;
             switch ((ArrangementName)attr.ArrangementType)
@@ -80,11 +83,11 @@ namespace RocksmithToolkitLib.DLCPackage
                 case ArrangementName.Rhythm:
                 case ArrangementName.Combo:
                     this.ArrangementType = Sng.ArrangementType.Guitar;
-                    tuning = TuningDefinitionRepository.Instance().Select(song.Tuning, GameVersion.RS2014);
+                    tuning = TuningDefinitionRepository.Instance().Select(attr.Tuning, GameVersion.RS2014);
                     break;
                 case ArrangementName.Bass:
                     this.ArrangementType = Sng.ArrangementType.Bass;
-                    tuning = TuningDefinitionRepository.Instance().SelectForBass(song.Tuning, GameVersion.RS2014);
+                    tuning = TuningDefinitionRepository.Instance().SelectForBass(attr.Tuning, GameVersion.RS2014);
                     isBass = true;
                     break;
                 case ArrangementName.Vocals:
@@ -94,10 +97,10 @@ namespace RocksmithToolkitLib.DLCPackage
             
             if (tuning == null) {
                 tuning = new TuningDefinition();
-                tuning.UIName = tuning.Name = tuning.NameFromStrings(song.Tuning, isBass);
+                tuning.UIName = tuning.Name = TuningDefinition.NameFromStrings(attr.Tuning, isBass);
                 tuning.Custom = true;
                 tuning.GameVersion = GameVersion.RS2014;
-                tuning.Tuning = song.Tuning;
+                tuning.Tuning = attr.Tuning;
                 TuningDefinitionRepository.Instance().Add(tuning, true);
             }
             this.Tuning = tuning.UIName;
@@ -118,11 +121,12 @@ namespace RocksmithToolkitLib.DLCPackage
             this.ToneB = attr.Tone_B;
             this.ToneC = attr.Tone_C;
             this.ToneD = attr.Tone_D;
+            this.Sng2014 = song;
 
             this.Id = Guid.Parse(attr.PersistentID);
             this.MasterId = attr.MasterID_RDV;
         }
-        
+
         public override string ToString()
         {
             var toneDesc = String.Empty;

@@ -51,5 +51,18 @@ namespace RocksmithToolkitLib.DLCPackage.AggregateGraph {
                     graphPartList.Add(new GraphPart(g));
             return graphPartList;
         }
+
+        public static List<GraphPart> GetGraphParts(Stream graphData)
+        {
+            var graphPartList = new List<GraphPart>();
+            using (var reader = new StreamReader(graphData))
+            {
+                while (!reader.EndOfStream)
+                {
+                    graphPartList.Add(new GraphPart(reader.ReadLine()));
+                }
+            }
+            return graphPartList;
+        }
     }
 }

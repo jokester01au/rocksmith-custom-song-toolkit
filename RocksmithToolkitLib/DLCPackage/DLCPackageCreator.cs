@@ -303,7 +303,7 @@ namespace RocksmithToolkitLib.DLCPackage
 
                 try {
                     // ALBUM ART
-                    var ddsfiles = info.ArtFiles;
+                    var ddsfiles = info.ArtFiles; // FIXME -- use streams
 
                     if (ddsfiles == null) {
                         string albumArtPath;
@@ -338,9 +338,9 @@ namespace RocksmithToolkitLib.DLCPackage
                         packPsarc.AddEntry(String.Format("assets/ui/lyrics/{0}/lyrics_{0}.dds", dlcName), new FileStream(info.LyricsTex, FileMode.Open, FileAccess.Read, FileShare.Read));
 
                     // AUDIO
-                    var audioFile = info.OggPath;
+					var audioFile = info.AudioPath;
                     if (File.Exists(audioFile))
-                        if (platform.IsConsole != audioFile.GetAudioPlatform().IsConsole)
+					if (platform.IsConsole != audioFile.GetAudioPlatform().IsConsole && info.IsOgg)
                             soundStream = OggFile.ConvertAudioPlatform(audioFile);
                         else
                             soundStream = File.OpenRead(audioFile);
@@ -348,9 +348,9 @@ namespace RocksmithToolkitLib.DLCPackage
                         throw new InvalidOperationException(String.Format("Audio file '{0}' not found.", audioFile));
 
                     // AUDIO PREVIEW
-                    var previewAudioFile = info.OggPreviewPath;
+					var previewAudioFile = info.AudioPreviewPath;
                     if (File.Exists(previewAudioFile))
-                        if (platform.IsConsole != previewAudioFile.GetAudioPlatform().IsConsole)
+					if (platform.IsConsole != previewAudioFile.GetAudioPlatform().IsConsole && info.IsOgg)
                             soundPreviewStream = OggFile.ConvertAudioPlatform(previewAudioFile);
                         else
                             soundPreviewStream = File.OpenRead(previewAudioFile);
@@ -791,7 +791,7 @@ namespace RocksmithToolkitLib.DLCPackage
                 albumArtStream = new FileStream(ddsfiles[0].destinationFile, FileMode.Open, FileAccess.Read, FileShare.Read);
 
                 // AUDIO
-                var audioFile = info.OggPath;
+				var audioFile = info.AudioPath;
                 if (File.Exists(audioFile))
                     if (platform.IsConsole != audioFile.GetAudioPlatform().IsConsole)
                         audioStream = OggFile.ConvertAudioPlatform(audioFile);

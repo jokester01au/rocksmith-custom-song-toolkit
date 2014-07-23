@@ -81,8 +81,8 @@ namespace RocksmithToolkitLib.DLCPackage.AggregateGraph {
                 }
             }
         }
-
-        public void Write(StreamWriter writer, bool lastLine = false) {
+		 
+		public override void Write(StreamWriter writer, bool lastLine = false) {
             var uuid = UUID.ToString().ToLower();
 
             base.Write(writer);
@@ -137,7 +137,7 @@ namespace RocksmithToolkitLib.DLCPackage.AggregateGraph {
             }
         }
 
-        public void Write(StreamWriter writer, bool lastLine = false) {
+		public virtual void Write(StreamWriter writer, bool lastLine = false) {
             var uuid = UUID.ToString().ToLower();
 
             foreach (var tag in Tag)

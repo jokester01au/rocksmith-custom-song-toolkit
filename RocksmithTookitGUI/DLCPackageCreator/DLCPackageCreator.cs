@@ -442,12 +442,12 @@ namespace RocksmithToolkitGUI.DLCPackageCreator
             if (!string.IsNullOrEmpty(packageData.AlbumArtPath))
                 packageData.AlbumArtPath = BasePath.RelativeTo(packageData.AlbumArtPath);
             
-            string audioPath = packageData.OggPath;
-            string audioPreviewPath = packageData.OggPreviewPath;
+            string audioPath = packageData.AudioPath;
+            string audioPreviewPath = packageData.AudioPreviewPath;
             if (!String.IsNullOrEmpty(audioPath))
-                packageData.OggPath = BasePath.RelativeTo(audioPath);
+                packageData.AudioPath = BasePath.RelativeTo(audioPath);
             if (!String.IsNullOrEmpty(audioPreviewPath))
-                packageData.OggPreviewPath = BasePath.RelativeTo(audioPreviewPath);
+                packageData.AudioPreviewPath = BasePath.RelativeTo(audioPreviewPath);
 
             foreach (var arr in packageData.Arrangements)
             {
@@ -552,7 +552,7 @@ namespace RocksmithToolkitGUI.DLCPackageCreator
                 unpackedDir = DLCPackageData.DoLikeProject(unpackedDir);
             
             // LOAD DATA
-            var info = DLCPackageData.LoadFromFolder(unpackedDir, packagePlatform);
+            var info = DLCPackageData.Load(unpackedDir, packagePlatform);
             info.PackageVersion = "1"; //TODO: add PackageVersion to "toolkit.version" File and use it
             switch (packagePlatform.platform)
             {
@@ -640,9 +640,9 @@ namespace RocksmithToolkitGUI.DLCPackageCreator
             AlbumArtPath = BasePath.AbsoluteTo(info.AlbumArtPath);
 
             // Audio file
-            if (!String.IsNullOrEmpty(info.OggPath))
-                AudioPath = BasePath.AbsoluteTo(info.OggPath);
-            platformPC.Checked = !String.IsNullOrEmpty(info.OggPath);
+            if (!String.IsNullOrEmpty(info.AudioPath))
+                AudioPath = BasePath.AbsoluteTo(info.AudioPath);
+            platformPC.Checked = !String.IsNullOrEmpty(info.AudioPath);
 
             songVolumeBox.Value = Decimal.Round((decimal)info.Volume, 2);
             previewVolumeBox.Value = (info.PreviewVolume != null) ? Decimal.Round((decimal)info.PreviewVolume, 2) : songVolumeBox.Value;
@@ -680,7 +680,7 @@ namespace RocksmithToolkitGUI.DLCPackageCreator
                             tuning.Name = tuning.UIName = arrangement.Tuning;
                             if (String.IsNullOrEmpty(tuning.Name))
                             {
-                                tuning.Name = tuning.UIName = tuning.NameFromStrings(arrangement.TuningStrings, arrangement.ArrangementType == ArrangementType.Bass);
+                                tuning.Name = tuning.UIName = TuningDefinition.NameFromStrings(arrangement.TuningStrings, arrangement.ArrangementType == ArrangementType.Bass);
                             }
 
                             TuningDefinitionRepository.Instance().Add(tuning, true);
@@ -884,8 +884,7 @@ namespace RocksmithToolkitGUI.DLCPackageCreator
                 },
 
                 AlbumArtPath = AlbumArtPath,
-                OggPath = AudioPath,
-                OggPreviewPath = audioPreviewPath,
+                AudioPreviewPath = audioPreviewPath,
                 Arrangements = arrangements,
                 Tones = tones,
                 TonesRS2014 = tonesRS2014,

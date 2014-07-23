@@ -20,14 +20,20 @@ namespace RocksmithToolkitLib {
         [XmlElement]
         public TuningStrings Tuning { get; set; }
 
-        public string NameFromStrings(TuningStrings tuning, bool isBass, bool inBem = true)
+        public static string NameFromStrings(TuningStrings tuning, bool isBass, bool inBem = true)
         {
+            return NameFromStrings(tuning.ToShortArray(), isBass, inBem);
+        }
+        
+        public static string NameFromStrings(short[] tuning, bool isBass, bool inBem = true)
+        {
+
             List<Int32> Notes = new List<Int32>();
             List<String> NoteNames = new List<String>();
             String[] notesNames = new String[] { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
             String[] notesNamesHi = new String[] { "C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B" };
             for (Byte s = 0; s < 6; s++)
-                Notes.Add(Sng2014FileWriter.GetMidiNote(tuning.ToShortArray(), s, 0, isBass, 0));
+                Notes.Add(Sng2014FileWriter.GetMidiNote(tuning, s, 0, isBass, 0));
             foreach (var mNote in Notes)
                 if(inBem) NoteNames.Add(notesNamesHi[mNote % 12]); //oct = mNote / 12 - 1
                 else NoteNames.Add(notesNames[mNote % 12]); //oct = mNote / 12 - 1

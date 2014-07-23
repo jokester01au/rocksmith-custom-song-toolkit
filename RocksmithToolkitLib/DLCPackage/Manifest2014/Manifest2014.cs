@@ -8,7 +8,7 @@ using RocksmithToolkitLib.DLCPackage.Manifest.Tone;
 
 namespace RocksmithToolkitLib.DLCPackage.Manifest
 {
-    public class Manifest2014<T>
+	public class Manifest2014<T>
     {
         public Dictionary<string, Dictionary<string, T>> Entries { get; set; }
         public String ModelName { get; set; }
@@ -44,12 +44,12 @@ namespace RocksmithToolkitLib.DLCPackage.Manifest
             writer.Flush();
         }
 
-		public static Manifest2014<T> Load(string manifestRS2014FilePath)
+		public static Manifest2014<T> LoadFromFile(string manifestRS2014FilePath)
 		{
-			return Load(new FileStream(manifestRS2014FilePath));
+			return LoadFromFile(File.OpenRead(manifestRS2014FilePath));
 		}
 
-		public static Manifest2014<T> Load(Stream stream)
+		public static Manifest2014<T> LoadFromFile(Stream stream)
 		{
 			using (var reader = new StreamReader(stream)) {
                 var manifest = new Manifest2014<T>();

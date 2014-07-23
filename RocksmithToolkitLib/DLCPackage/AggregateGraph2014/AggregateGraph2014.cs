@@ -436,9 +436,12 @@ namespace RocksmithToolkitLib.DLCPackage.AggregateGraph
         }
 
         public static AggregateGraph2014 LoadFromFile(string agregateGraphFile) {
-            AggregateGraph2014 aggregateGraph = new AggregateGraph2014(); ;
-            var graphPartList = GraphPart.GetGraphParts(File.ReadAllLines(agregateGraphFile));
+            return LoadFromFile(File.OpenRead(agregateGraphFile));
+        }
 
+        public static AggregateGraph2014 LoadFromFile(Stream aggregateGraphFile) {
+            AggregateGraph2014 aggregateGraph = new AggregateGraph2014();
+            var graphPartList = GraphPart.GetGraphParts(aggregateGraphFile);
             var json = GraphPart.WhereByValue(graphPartList, TagValue.JsonDB.GetDescription());
             if (json.Count() > 0) {
                 aggregateGraph.JsonDB = new List<GraphItem>();

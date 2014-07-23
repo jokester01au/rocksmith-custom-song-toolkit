@@ -209,7 +209,7 @@ namespace RocksmithToolkitLib.DLCPackage
                 psarcStream.Flush();
                 psarcStream.Seek(0, SeekOrigin.Begin);
 
-                if (Path.GetExtension(saveFileName) != ".dat")
+                if (Path.GetExtension(saveFileName) != ".psarc")
                     saveFileName += ".dat";
 
                 using (var outputFileStream = File.Create(saveFileName))
@@ -542,13 +542,13 @@ namespace RocksmithToolkitLib.DLCPackage
             if (File.Exists(fullPath)) {
                 // Get PLATFORM by Extension + Get PLATFORM by pkg EndName
                 switch (Path.GetExtension(fullPath)) {
-                    case ".dat":
+                    case ".psarc":
                         return new Platform(GamePlatform.Pc, GameVersion.RS2012);
                     case "":
                         return new Platform(GamePlatform.XBox360, GameVersion.RS2012);
                     case ".edat":
                         return new Platform(GamePlatform.PS3, GameVersion.None);
-                    case ".psarc":
+                    case ".dat":
                         return TryGetPlatformByEndName(fullPath);
                     default:
                         return new Platform(GamePlatform.None, GameVersion.None);
@@ -608,7 +608,7 @@ namespace RocksmithToolkitLib.DLCPackage
 		/// </summary>
 		/// <param name="fileName">Folder of File</param>
 		/// <returns>Platform(DetectedPlatform, RS2014 ? None)</returns>
-        private static Platform TryGetPlatformByEndName(string fileName)
+        public static Platform TryGetPlatformByEndName(string fileName)
         {
             GamePlatform p = GamePlatform.None;
             GameVersion v = GameVersion.RS2014;
