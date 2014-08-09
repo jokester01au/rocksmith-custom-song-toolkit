@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using RocksmithToolkitLib.DLCPackage;
 using RocksmithToolkitLib.Extensions;
+using System.Security.Cryptography;
 
 namespace RocksmithToolkitLib.PSARC
 {
@@ -13,7 +14,7 @@ namespace RocksmithToolkitLib.PSARC
 	{
 		private class Header
 		{
-			public uint MagicNumber;
+            public uint MagicNumber;
 			public uint VersionNumber;
 			public uint CompressionMethod;
 			public uint TotalTOCSize;
@@ -34,7 +35,8 @@ namespace RocksmithToolkitLib.PSARC
 		}
 
 		private PSARC.Header header = new PSARC.Header();
-		public List<Entry> Entries
+        public string Digest { get; private set; }
+        public List<Entry> Entries
 		{
 			get;
 			private set;
@@ -88,10 +90,10 @@ namespace RocksmithToolkitLib.PSARC
 
 		public void ReadNames()
 		{
-			this.Entries[0].Name = "NamesBlock.bin";
+			this.Entries[0].Name = "/NamesBlock.bin";
 			Stream data = this.Entries[0].Data;
 			BinaryReader binaryReader = new BinaryReader(data);
-			StringBuilder stringBuilder = new StringBuilder(100);
+			StringBuilder stringBuilder = new StringBuilder("/", 100);
 			string empty = string.Empty;
 			int index = 1;
 			while (data.Position < data.Length)
@@ -100,7 +102,7 @@ namespace RocksmithToolkitLib.PSARC
 				if (c == '\n')
 				{
 					this.Entries[index++].Name = stringBuilder.ToString();
-					stringBuilder = new StringBuilder();
+					stringBuilder = new StringBuilder("/", 100);
 				}
 				else
 				{
@@ -121,99 +123,105 @@ namespace RocksmithToolkitLib.PSARC
             }
         }
 
-		public void Read(Stream str)
-		{
+        public void Read(Stream str)
+        {
+            this.Digest = GetDigest(str, this.DoRead);
+        }
+
+        private void DoRead(Stream str)
+        {
 			this.Entries.Clear();
-			BigEndianBinaryReader bigEndianBinaryReader = new BigEndianBinaryReader(str);
-			this.header.MagicNumber = bigEndianBinaryReader.ReadUInt32();
-			this.header.VersionNumber = bigEndianBinaryReader.ReadUInt32();
-			this.header.CompressionMethod = bigEndianBinaryReader.ReadUInt32();
-			this.header.TotalTOCSize = bigEndianBinaryReader.ReadUInt32();
-			this.header.TOCEntrySize = bigEndianBinaryReader.ReadUInt32();
-			this.header.numFiles = bigEndianBinaryReader.ReadUInt32();
-			this.header.blockSize = bigEndianBinaryReader.ReadUInt32();
-			this.header.archiveFlags = bigEndianBinaryReader.ReadUInt32();
+            
+                    BigEndianBinaryReader bigEndianBinaryReader = new BigEndianBinaryReader(str);
+                    this.header.MagicNumber = bigEndianBinaryReader.ReadUInt32();
+                    this.header.VersionNumber = bigEndianBinaryReader.ReadUInt32();
+                    this.header.CompressionMethod = bigEndianBinaryReader.ReadUInt32();
+                    this.header.TotalTOCSize = bigEndianBinaryReader.ReadUInt32();
+                    this.header.TOCEntrySize = bigEndianBinaryReader.ReadUInt32();
+                    this.header.numFiles = bigEndianBinaryReader.ReadUInt32();
+                    this.header.blockSize = bigEndianBinaryReader.ReadUInt32();
+                    this.header.archiveFlags = bigEndianBinaryReader.ReadUInt32();
 
-            var tocStream = str;
-            BigEndianBinaryReader bigEndianBinaryReaderTOC = bigEndianBinaryReader;
-            if (this.header.archiveFlags == 4)
-            {
-                var decStream = new TempFileStream();
-                using (var outputStream = new MemoryStream())
-                {
-                    RijndaelEncryptor.DecryptPSARC(str, outputStream, this.header.TotalTOCSize);
-
-                    int bytesRead;
-                    byte[] buffer = new byte[30000];
-
-                    int decMax = (int)this.header.TotalTOCSize - 32;
-                    int decSize = 0;
-                    outputStream.Seek(0, SeekOrigin.Begin);
-                    while ((bytesRead = outputStream.Read(buffer, 0, buffer.Length)) > 0)
+                    var tocStream = str;
+                    BigEndianBinaryReader bigEndianBinaryReaderTOC = bigEndianBinaryReader;
+                    if (this.header.archiveFlags == 4)
                     {
-                        decSize += bytesRead;
-                        if (decSize > decMax) bytesRead = decMax - (decSize - bytesRead);
-                        decStream.Write(buffer, 0, bytesRead);
+                        var decStream = new TempFileStream();
+                        using (var outputStream = new MemoryStream())
+                        {
+                            RijndaelEncryptor.DecryptPSARC(str, outputStream, this.header.TotalTOCSize);
+
+                            int bytesRead;
+                            byte[] buffer = new byte[30000];
+
+                            int decMax = (int)this.header.TotalTOCSize - 32;
+                            int decSize = 0;
+                            outputStream.Seek(0, SeekOrigin.Begin);
+                            while ((bytesRead = outputStream.Read(buffer, 0, buffer.Length)) > 0)
+                            {
+                                decSize += bytesRead;
+                                if (decSize > decMax) bytesRead = decMax - (decSize - bytesRead);
+                                decStream.Write(buffer, 0, bytesRead);
+                            }
+                        }
+
+                        decStream.Seek(0, SeekOrigin.Begin);
+                        str.Seek(this.header.TotalTOCSize, SeekOrigin.Begin);
+                        tocStream = decStream;
+                        bigEndianBinaryReaderTOC = new BigEndianBinaryReader(tocStream);
                     }
-                }
 
-                decStream.Seek(0, SeekOrigin.Begin);
-                str.Seek(this.header.TotalTOCSize, SeekOrigin.Begin);
-                tocStream = decStream;
-                bigEndianBinaryReaderTOC = new BigEndianBinaryReader(tocStream);
-            }
+                    if (this.header.MagicNumber == 1347633490)
+                    {
+                        if (this.header.CompressionMethod == 2053925218)
+                        {
+                            byte b = 1;
+                            uint num = 256;
+                            do
+                            {
+                                num *= 256;
+                                b += 1;
+                            }
+                            while (num < this.header.blockSize);
+                            int num2 = 0;
+                            while (num2 < this.header.numFiles)
+                            {
+                                this.Entries.Add(new Entry
+                                {
+                                    id = num2,
+                                    MD5 = bigEndianBinaryReaderTOC.ReadBytes(16),
+                                    zIndex = bigEndianBinaryReaderTOC.ReadUInt32(),
+                                    Length = bigEndianBinaryReaderTOC.ReadUInt40(),
+                                    Offset = bigEndianBinaryReaderTOC.ReadUInt40()
+                                });
+                                num2++;
+                            }
 
-			if (this.header.MagicNumber == 1347633490)
-			{
-				if (this.header.CompressionMethod == 2053925218)
-				{
-					byte b = 1;
-					uint num = 256;
-					do
-					{
-						num *= 256;
-						b += 1;
-					}
-					while (num < this.header.blockSize);
-					int num2 = 0;
-					while (num2 < this.header.numFiles)
-					{
-						this.Entries.Add(new Entry
-						{
-							id = num2,
-                            MD5 = bigEndianBinaryReaderTOC.ReadBytes(16),
-                            zIndex = bigEndianBinaryReaderTOC.ReadUInt32(),
-                            Length = bigEndianBinaryReaderTOC.ReadUInt40(),
-                            Offset = bigEndianBinaryReaderTOC.ReadUInt40()
-						});
-						num2++;
-					}
-
-                    long decMax = (this.header.archiveFlags == 4) ? 32 : 0;
-                    uint num3 = (this.header.TotalTOCSize - (uint)(tocStream.Position + decMax)) / (uint)b;
-					uint[] array = new uint[num3];
-					num2 = 0;
-					while (num2 < num3)
-					{
-						switch (b)
-						{
-						case 2:
-                            array[num2] = (uint)bigEndianBinaryReaderTOC.ReadUInt16();
-							break;
-						case 3:
-                            array[num2] = bigEndianBinaryReaderTOC.ReadUInt24();
-							break;
-						case 4:
-                            array[num2] = bigEndianBinaryReaderTOC.ReadUInt32();
-							break;
-						}
-						num2++;
-					}
-					this.inflateEntries(bigEndianBinaryReader, array.ToArray<uint>(), this.header.blockSize);
-					this.ReadNames();
-				}
-			}
-            str.Flush();
+                            long decMax = (this.header.archiveFlags == 4) ? 32 : 0;
+                            uint num3 = (this.header.TotalTOCSize - (uint)(tocStream.Position + decMax)) / (uint)b;
+                            uint[] array = new uint[num3];
+                            num2 = 0;
+                            while (num2 < num3)
+                            {
+                                switch (b)
+                                {
+                                    case 2:
+                                        array[num2] = (uint)bigEndianBinaryReaderTOC.ReadUInt16();
+                                        break;
+                                    case 3:
+                                        array[num2] = bigEndianBinaryReaderTOC.ReadUInt24();
+                                        break;
+                                    case 4:
+                                        array[num2] = bigEndianBinaryReaderTOC.ReadUInt32();
+                                        break;
+                                }
+                                num2++;
+                            }
+                            this.inflateEntries(bigEndianBinaryReader, array.ToArray<uint>(), this.header.blockSize);
+                            this.ReadNames();
+                        }
+                    }
+                    str.Flush();
 		}
 
 		private void deflateEntries(out Dictionary<Entry, byte[]> entryDeflatedData, out List<uint> zLengths, uint blockSize)
@@ -399,5 +407,29 @@ namespace RocksmithToolkitLib.PSARC
 
 			str.Flush();
 		}
-	}
+
+        public static string GetDigest(string filename, Action<Stream> process = null)
+        {
+            using (var str = File.OpenRead(filename))
+                return GetDigest(str, process);
+        }
+
+        public static string GetDigest(Stream str, Action<Stream> process = null)
+        {
+            using (var md5 = MD5.Create())
+            {
+                using (var mem = new MemoryStream((int) str.Length))
+                {
+                    str.CopyTo(mem);
+                    mem.Seek(0, SeekOrigin.Begin);
+                    var hash = md5.ComputeHash(mem);
+                    mem.Seek(0, SeekOrigin.Begin);
+                    if (process != null)
+                        process(mem);
+                    
+                    return System.Convert.ToBase64String(hash);
+                }
+            }
+        }
+    }
 }

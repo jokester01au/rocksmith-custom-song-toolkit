@@ -20,10 +20,19 @@ namespace RocksmithToolkitLib.Sng2014HSL
 
         public static Sng2014File ConvertXML(string xmlPath, ArrangementType type)
         {
-            if (type != ArrangementType.Vocal) {
-                return Sng2014File.ConvertSong(xmlPath);
-            } else {
-                return Sng2014FileWriter.ReadVocals(xmlPath);
+            using (var fs = File.OpenRead(xmlPath)) 
+                return ConvertXML(fs, type);
+        }
+
+        public static Sng2014File ConvertXML(Stream xml, ArrangementType type = ArrangementType.Guitar)
+        {
+            if (type == ArrangementType.Vocal)
+            {
+                return Sng2014FileWriter.ReadVocals(xml);
+            }
+            else
+            {
+                return Sng2014File.ConvertSong(xml);
             }
         }
 
@@ -35,7 +44,7 @@ namespace RocksmithToolkitLib.Sng2014HSL
         public int[] DNACount { get ; set ; }
 
         // this is platform independent SNG object
-        public static Sng2014File ConvertSong(string xmlFile) {
+        public static Sng2014File ConvertSong(Stream xmlFile) {
             Song2014 song = Song2014.LoadFromFile(xmlFile);
             var parser = new Sng2014FileWriter();
             Sng2014File sng = new Sng2014File();
@@ -268,10 +277,15 @@ namespace RocksmithToolkitLib.Sng2014HSL
             this.Actions = new ActionSection(); this.Actions.read(r);
             this.Events = new EventSection(); this.Events.read(r);
             this.Tones = new ToneSection(); this.Tones.read(r);
-            this.DNAs = new DnaSection(); this.DNAs.read(r);
+            this.DNAs = new DnaSection(); 
+            this.DNACount = this.DNAs.read(r);
             this.Sections = new SectionSection(); this.Sections.read(r);
             this.Arrangements = new ArrangementSection(); this.Arrangements.read(r);
             this.Metadata = new Metadata(); this.Metadata.read(r);
+
+            this.NoteCount = new int[3];
+            for (var i = 0; i < this.NoteCount.Length; i ++ )
+                this.NoteCount[i] = Sng2014FileWriter.GetNoteCount(this, i);
         }
 
         public void Write(EndianBinaryWriter w) {

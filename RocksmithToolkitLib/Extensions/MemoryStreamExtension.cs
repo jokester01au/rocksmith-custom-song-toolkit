@@ -293,4 +293,83 @@ namespace RocksmithToolkitLib.Extensions
 
         #endregion
     }
+
+    public class RecyclableStream : Stream
+    {
+        // when asked to close, this stream instead seeks back to the start.
+
+        private Stream underlyingStream;
+
+        public RecyclableStream(Stream underlyingStream)
+        {
+            this.underlyingStream = underlyingStream;
+        }
+
+        public override void Close()
+        {
+            underlyingStream.Seek(0, SeekOrigin.Begin);
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            underlyingStream.Seek(0, SeekOrigin.Begin);
+        }
+
+        public override bool CanRead
+        {
+            get { return underlyingStream.CanRead;  }
+        }
+
+        public override bool CanSeek
+        {
+            get { return underlyingStream.CanSeek; }
+        }
+
+        public override bool CanWrite
+        {
+            get { return underlyingStream.CanTimeout; }
+        }
+
+        public override void Flush()
+        {
+            underlyingStream.Flush();
+        }
+
+        public override long Length
+        {
+            get { return underlyingStream.Length;  }
+        }
+
+        public override long Position
+        {
+            get
+            {
+                return underlyingStream.Position;
+            }
+            set
+            {
+                underlyingStream.Position = value;
+            }
+        }
+
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            return underlyingStream.Read(buffer, offset, count);
+        }
+
+        public override long Seek(long offset, SeekOrigin origin)
+        {
+            return underlyingStream.Seek(offset, origin);
+        }
+
+        public override void SetLength(long value)
+        {
+            underlyingStream.SetLength(value);
+        }
+
+        public override void Write(byte[] buffer, int offset, int count)
+        {
+            underlyingStream.Write(buffer, offset, count);
+        }
+    }
 }

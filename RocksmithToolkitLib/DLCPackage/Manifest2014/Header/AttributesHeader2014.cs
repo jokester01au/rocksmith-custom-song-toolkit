@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -70,7 +70,7 @@ namespace RocksmithToolkitLib.DLCPackage.Manifest.Header
 
         public AttributesHeader2014(string arrangementFileName, Arrangement arrangement, DLCPackageData info, Platform platform) {
             IsVocal = arrangement.ArrangementType == Sng.ArrangementType.Vocal;
-            SongContent = (IsVocal) ? null : Song2014.LoadFromFile(arrangement.SongXml.File);
+            SongContent = (IsVocal) ? null : Song2014.LoadFromFile(arrangement.SongXml.Data);
             var dlcName = info.Name.ToLower();
 
             var albumUrn = String.Format(URN_TEMPLATE, TagValue.Image.GetDescription(), TagValue.DDS.GetDescription(), String.Format("album_{0}", dlcName));

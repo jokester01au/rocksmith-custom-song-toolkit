@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -10,6 +10,7 @@ namespace RocksmithToolkitLib.DLCPackage.Manifest.Tone
     {
         public string Type { get; set; }
         public Dictionary<string, float> KnobValues { get; set; }
+       
         [JsonProperty("Key")]
         public string PedalKey { get; set; }
         public string Category { get; set; }

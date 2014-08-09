@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -65,7 +65,7 @@ namespace RocksmithToolkitLib.DLCPackage.XBlock
                         entity.Properties.Add(new Property2014() { Name = "AlbumArtSmall", Set = new Set() { Value = String.Format(URN_TEMPLATE, TagValue.Image.GetDescription(), TagValue.DDS.GetDescription(), String.Format("album_{0}_64", dlcName)) } });
                         entity.Properties.Add(new Property2014() { Name = "AlbumArtMedium", Set = new Set() { Value = String.Format(URN_TEMPLATE, TagValue.Image.GetDescription(), TagValue.DDS.GetDescription(), String.Format("album_{0}_128", dlcName)) } });
                         entity.Properties.Add(new Property2014() { Name = "AlbumArtLarge", Set = new Set() { Value = String.Format(URN_TEMPLATE, TagValue.Image.GetDescription(), TagValue.DDS.GetDescription(), String.Format("album_{0}_256", dlcName)) } });
-                        entity.Properties.Add(new Property2014() { Name = "LyricArt", Set = new Set() { Value = File.Exists(info.LyricsTex) ? String.Format(URN_TEMPLATE, TagValue.Image.GetDescription(), TagValue.DDS.GetDescription(), String.Format("lyrics_{0}", dlcName)) : "" } });
+                        entity.Properties.Add(new Property2014() { Name = "LyricArt", Set = new Set() { Value = info.LyricsTex != null ? String.Format(URN_TEMPLATE, TagValue.Image.GetDescription(), TagValue.DDS.GetDescription(), String.Format("lyrics_{0}", dlcName)) : "" } });
                         entity.Properties.Add(new Property2014() { Name = "ShowLightsXMLAsset", Set = new Set() { Value = String.Format(URN_TEMPLATE, TagValue.Application.GetDescription(), TagValue.XML.GetDescription(), String.Format(AggregateGraph2014.NAME_SHOWLIGHT, dlcName)) } });
                         entity.Properties.Add(new Property2014() { Name = "SoundBank", Set = new Set() { Value = String.Format(URN_TEMPLATE, TagValue.Audio.GetDescription(), TagValue.WwiseSoundBank.GetDescription(), String.Format("song_{0}", dlcName)) } });
                         entity.Properties.Add(new Property2014() { Name = "PreviewSoundBank", Set = new Set() { Value = String.Format(URN_TEMPLATE, TagValue.Audio.GetDescription(), TagValue.WwiseSoundBank.GetDescription(), String.Format("song_{0}_preview", dlcName)) } });

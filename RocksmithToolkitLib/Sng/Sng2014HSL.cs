@@ -673,9 +673,21 @@ public class DnaSection
         "Dnas"
     };
     public string[] order { get { return this._order; } }
-    public void read(BinaryReader r) {
+    public int[] read(BinaryReader r) {
+
         this.Count = r.ReadInt32();
-        this.Dnas = new Dna[this.Count]; for (int i=0; i<this.Count; i++) { Dna obj = new Dna(); obj.read(r); this.Dnas[i] = obj; }
+        this.Dnas = new Dna[this.Count];
+        var DNACount = new int[4];
+
+        // based on events: dna_none=0, dna_solo=1, dna_riff=2, dna_chord=3
+        for (int i = 0; i < this.Count; i++) {
+            Dna obj = new Dna(); 
+            obj.read(r); 
+            this.Dnas[i] = obj;
+            DNACount[obj.DnaId] += 1;
+        }
+
+        return DNACount;
     }
 }
 

@@ -2,6 +2,8 @@ using System;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
+using RocksmithToolkitLib.Extensions;
+
 namespace RocksmithToolkitLib.PSARC
 {
 	public class Entry
@@ -44,10 +46,11 @@ namespace RocksmithToolkitLib.PSARC
 			get;
 			set;
 		}
+        private Stream _Data;
 		public Stream Data
 		{
-			get;
-			set;
+			get { return _Data; }
+            set { _Data = new RecyclableStream(value); }
 		}
 		public Entry()
 		{

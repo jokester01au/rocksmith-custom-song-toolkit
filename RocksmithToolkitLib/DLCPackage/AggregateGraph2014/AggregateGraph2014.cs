@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -192,7 +192,7 @@ namespace RocksmithToolkitLib.DLCPackage.AggregateGraph
             }
 
             // Image Art (DDS)
-            var aArtArray = new string[] { info.AlbumArtPath };
+            string[] aArtArray = null; // FIXME new string[] { info.AlbumArt.Path};
             if (currentPlatform.version == GameVersion.RS2014)
                 aArtArray = new string[] { 
                     String.Format("album_{0}_256.dds", dlcName), 
@@ -216,7 +216,7 @@ namespace RocksmithToolkitLib.DLCPackage.AggregateGraph
             }
 
             // Lyrics Font Texture
-            if (!String.IsNullOrEmpty(info.LyricsTex)) {
+            if (info.LyricsTex != null) {
                 LyricsTex = new GraphItemLLID();
                 var tex = new GraphItemLLID();
                 tex.Canonical = String.Format(CANONICAL_MANIFEST_PC, dlcName);

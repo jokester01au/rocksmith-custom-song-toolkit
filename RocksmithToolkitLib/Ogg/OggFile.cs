@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -243,7 +243,11 @@ namespace RocksmithToolkitLib.Ogg
         public static Stream ConvertAudioPlatform(string inputFile)
         {
             inputFile.VerifyHeaders();
-            var platform = inputFile.GetAudioPlatform();
+            using (var inputFileStream = File.Open(inputFile, FileMode.Open))
+                return ConvertAudioPlatform(inputFileStream);
+        }
+        public static Stream ConvertAudioPlatform(Stream inputFileStream) { 
+            var platform = inputFileStream.GetAudioPlatform();
 
             EndianBitConverter bitConverter;
             EndianBitConverter targetbitConverter;
@@ -261,7 +265,6 @@ namespace RocksmithToolkitLib.Ogg
                 throw new InvalidDataException("The input file doesn't appear to be a valid Wwise file.");
 
             using (var outputFileStream = new MemoryStream())
-            using (var inputFileStream = File.Open(inputFile, FileMode.Open))
             using (var writer = new EndianBinaryWriter(targetbitConverter, outputFileStream))
             using (var reader = new EndianBinaryReader(bitConverter, inputFileStream))
             {
@@ -352,10 +355,14 @@ namespace RocksmithToolkitLib.Ogg
         
         public static void VerifyHeaders(this string inputFile)
         {
-            var platform = inputFile.GetAudioPlatform();
+            using (var inputFileStream = File.Open(inputFile, FileMode.Open))
+                VerifyHeaders(inputFileStream);
+        }
+
+        public static void VerifyHeaders(this Stream inputFileStream) {
+            var platform = inputFileStream.GetAudioPlatform();
             EndianBitConverter bitConverter = platform.GetBitConverter();
 
-            using (var inputFileStream = File.Open(inputFile, FileMode.Open))
             using (var reader = new EndianBinaryReader(bitConverter, inputFileStream))
             {
                 reader.Seek(4, SeekOrigin.Begin);

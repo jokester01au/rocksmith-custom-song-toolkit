@@ -1,4 +1,4 @@
-﻿// Type: RocksmithToolkitLib.DifficultyRemover
+// Type: RocksmithToolkitLib.DifficultyRemover
 // Assembly: RocksmithToolkitLib, Version=1.1.5.6, Culture=neutral, PublicKeyToken=null
 // MVID: 5F34AA64-CF4E-4E33-BA2F-614A31811C97
 // Assembly location: C:\Program Files\Dredd Foxx Rocksmith Tools\RocksmithToolkitLib.dll

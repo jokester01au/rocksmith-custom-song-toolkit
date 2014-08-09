@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -46,18 +46,14 @@ namespace RocksmithToolkitLib.DLCPackage.Showlight
                 if (arrangement.ArrangementType == Sng.ArrangementType.Vocal)
                     continue;
 
-                var showlightFile = Path.Combine(Path.GetDirectoryName(arrangement.SongXml.File), 
-                    Path.GetFileNameWithoutExtension(arrangement.SongXml.File) + "_showlights.xml");
-
-                if (!File.Exists(showlightFile))
+               
+                if (info.Showlights == null)
                 {
-                    showlightFile = Path.Combine(Path.GetDirectoryName(arrangement.SongXml.File), info.Name + "_showlights.xml");
-
-                    if (PopShList(Genegate(arrangement.SongXml.File).ShowlightList))
+                    if (PopShList(Generate(arrangement.SongXml.Data).ShowlightList))
                         continue;
                 }
 
-                if (PopShList(LoadFromFile(showlightFile).ShowlightList))
+                if (PopShList(LoadFromFile(info.Showlights).ShowlightList))
                     continue;
             }
 
@@ -167,7 +163,12 @@ namespace RocksmithToolkitLib.DLCPackage.Showlight
             return ShowlightList;
         }
 
-        public Showlights Genegate(string xmlFile)
+        public Showlights Generate(string xmlFile)
+        {
+            using (var stream = File.OpenRead(xmlFile))
+                return Generate(stream);
+        }
+        public Showlights Generate(Stream xmlFile)
         {
             var midiNotes = new List<Showlight>();
             var chordNotes = new List<Showlight>();
@@ -233,7 +234,14 @@ namespace RocksmithToolkitLib.DLCPackage.Showlight
             return true;
         }
 
-        public Showlights LoadFromFile(string showlightsRS2014File)
+
+        public Showlights LoadFromFile(String showlightsRS2014File)
+        {
+            using (var stream = File.OpenRead(showlightsRS2014File))
+                return LoadFromFile(stream);
+        }
+        
+        public Showlights LoadFromFile(Stream showlightsRS2014File)
         {
             using (var reader = new StreamReader(showlightsRS2014File))
             {

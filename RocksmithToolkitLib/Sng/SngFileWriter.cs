@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,14 +8,53 @@ using MiscUtil.Conversion;
 using MiscUtil.IO;
 using RocksmithToolkitLib.Xml;
 using System.ComponentModel;
+using System.Reflection;
 
 namespace RocksmithToolkitLib.Sng
 {
     public enum ArrangementName : int { Lead = 0/* Single notes */, Rhythm /* Chords */, Combo /* Combo */, Bass, Vocals };
-    public enum ArrangementType { Guitar, Bass, Vocal };
+    public enum ArrangementType { 
+        [Alias(ArrangementName.Lead, ArrangementName.Rhythm, ArrangementName.Combo)]
+        Guitar, 
+        [Alias(ArrangementName.Bass)]
+        Bass, 
+        [Alias(ArrangementName.Vocals)]
+        Vocal 
+    };
     public enum InstrumentTuning { [Description("E Standard")] Standard, [Description("Drop D")] DropD, [Description("Eb")] EFlat, [Description("Open G")] OpenG };
     public enum PluckedType : int { NotPicked, Picked };
+
+    public class Alias : System.Attribute
+    {
+        internal string[] Aliases;
+
+        public Alias(params string[] aliases)
+        {
+            this.Aliases = aliases;    
+        }
+        public Alias(params object[] aliases) {
+            this.Aliases = aliases.Select(a => a.ToString()).ToArray();
+        }
     
+        private static Dictionary<Type, Dictionary<string, object>> AllAliases = new Dictionary<Type,Dictionary<string,object>>();
+
+        public static T Parse<T>(object value) {
+            var result = Enum.Parse(typeof(T), value.ToString());
+            return (T) GetAliases(typeof(T))[value.ToString()];
+        }
+
+        private static Dictionary<string, object> GetAliases(Type t) {
+            if (!AllAliases.ContainsKey(t)) {
+                     var aliases = t.GetFields().SelectMany(fi => ((Alias)fi.GetCustomAttribute(typeof(Alias))).Aliases.Select(a => new[] {a, fi.Name}));
+                AllAliases[t] = aliases.ToDictionary(x => x[0], x => Enum.Parse(t, x[1]));
+                foreach (var declared in Enum.GetValues(t))
+                    AllAliases[t][declared.ToString()] = declared;
+            }
+            return AllAliases[t];
+        }
+   
+    }
+
     public static class InstrumentTuningExtensions {
 
         private static readonly int[] StandardOffsets = { 0, 0, 0, 0, 0, 0 };

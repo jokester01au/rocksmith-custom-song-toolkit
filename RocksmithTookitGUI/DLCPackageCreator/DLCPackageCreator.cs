@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -439,15 +439,15 @@ namespace RocksmithToolkitGUI.DLCPackageCreator
             var BasePath = Path.GetDirectoryName(dlcSavePath);
 
             //Make the paths relative
-            if (!string.IsNullOrEmpty(packageData.AlbumArtPath))
-                packageData.AlbumArtPath = BasePath.RelativeTo(packageData.AlbumArtPath);
+            //if (packageData.AlbumArt != null)
+            //    packageData.AlbumArt.Path = BasePath.RelativeTo(packageData.AlbumArt.Path);
             
-            string audioPath = packageData.AudioPath;
-            string audioPreviewPath = packageData.AudioPreviewPath;
-            if (!String.IsNullOrEmpty(audioPath))
-                packageData.AudioPath = BasePath.RelativeTo(audioPath);
-            if (!String.IsNullOrEmpty(audioPreviewPath))
-                packageData.AudioPreviewPath = BasePath.RelativeTo(audioPreviewPath);
+            //string audioPath = packageData.Audio;
+            //string audioPreviewPath = packageData.AudioPreview;
+            //if (!String.IsNullOrEmpty(audioPath))
+            //    packageData.Audio = BasePath.RelativeTo(audioPath);
+            //if (!String.IsNullOrEmpty(audioPreviewPath))
+            //    packageData.AudioPreview = BasePath.RelativeTo(audioPreviewPath);
 
             foreach (var arr in packageData.Arrangements)
             {
@@ -552,7 +552,7 @@ namespace RocksmithToolkitGUI.DLCPackageCreator
                 unpackedDir = DLCPackageData.DoLikeProject(unpackedDir);
             
             // LOAD DATA
-            var info = DLCPackageData.Load(unpackedDir, packagePlatform);
+            DLCPackageData info = null; // FIXME DLCPackageData.Load(unpackedDir, packagePlatform);
             info.PackageVersion = "1"; //TODO: add PackageVersion to "toolkit.version" File and use it
             switch (packagePlatform.platform)
             {
@@ -604,8 +604,6 @@ namespace RocksmithToolkitGUI.DLCPackageCreator
                     }
                     break;
                 case GameVersion.RS2014:
-                    if (info.TonesRS2014 == null)
-                        info.TonesRS2014 = new List<Tone2014>();
                     if (info.TonesRS2014.Count == 0)
                         info.TonesRS2014.Add(CreateNewTone());
 
@@ -637,12 +635,12 @@ namespace RocksmithToolkitGUI.DLCPackageCreator
             AverageTempoTB.Text = info.SongInfo.AverageTempo.ToString();
 
             // Album art
-            AlbumArtPath = BasePath.AbsoluteTo(info.AlbumArtPath);
+            //AlbumArtPath = BasePath.AbsoluteTo(info.AlbumArt.Path);
 
             // Audio file
-            if (!String.IsNullOrEmpty(info.AudioPath))
-                AudioPath = BasePath.AbsoluteTo(info.AudioPath);
-            platformPC.Checked = !String.IsNullOrEmpty(info.AudioPath);
+            //if (info.Audio != null)
+            //    AudioPath = BasePath.AbsoluteTo(info.Audio.Path);
+            //platformPC.Checked = !String.IsNullOrEmpty(info.Audio.Path);
 
             songVolumeBox.Value = Decimal.Round((decimal)info.Volume, 2);
             previewVolumeBox.Value = (info.PreviewVolume != null) ? Decimal.Round((decimal)info.PreviewVolume, 2) : songVolumeBox.Value;
@@ -862,7 +860,7 @@ namespace RocksmithToolkitGUI.DLCPackageCreator
             var songVol = (float)songVolumeBox.Value;
             var previewVol = (!String.IsNullOrEmpty(audioPreviewPath)) ? (float)songVolumeBox.Value : songVol;
 
-            var data = new DLCPackageData
+            var data = new DLCPackageData()
             {
                 GameVersion = CurrentGameVersion,
                 Pc = platformPC.Checked,
@@ -883,11 +881,11 @@ namespace RocksmithToolkitGUI.DLCPackageCreator
                     AverageTempo = tempo
                 },
 
-                AlbumArtPath = AlbumArtPath,
-                AudioPreviewPath = audioPreviewPath,
-                Arrangements = arrangements,
+                //AlbumArt = AlbumArtPath,
+                //AudioPreview = audioPreviewPath,
+                //Arrangements = arrangements,
                 Tones = tones,
-                TonesRS2014 = tonesRS2014,
+                //TonesRS2014 = tonesRS2014,
                 Volume = songVol,
                 PreviewVolume = previewVol,
                 SignatureType = PackageMagic.CON,

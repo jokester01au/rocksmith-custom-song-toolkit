@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
@@ -9,6 +9,8 @@ using RocksmithToolkitLib.DLCPackage.Manifest;
 using RocksmithToolkitLib.Sng;
 using RocksmithToolkitLib.Sng2014HSL;
 using RocksmithToolkitLib.Xml;
+using RocksmithToolkitLib.Extensions;
+using RocksmithToolkitLib.DLCPackage.Manifest.Tone;
 
 namespace RocksmithToolkitLib.DLCPackage
 {
@@ -30,22 +32,52 @@ namespace RocksmithToolkitLib.DLCPackage
 
     public class Arrangement
     {
-        public SongFile SongFile { get; set; }
-        public SongXML SongXml { get; set; }
+        private string _songFileFile = null;
+        private string _songXmlFile = null;
+
+        public SongFile SongFile
+        {
+            get
+            {
+                var platform = new Platform(GamePlatform.Pc, GameVersion.RS2014); //FIXME
+                var stream = new MemoryStream();
+                Sng2014.WriteSng(stream, platform);
+                return new SongFile() { File = _songFileFile ?? Path.ChangeExtension(_songXmlFile, ".sng"), Data = stream };               
+            }            
+        }
+
+        public SongXML SongXml
+        {
+            get
+            {
+                var platform = new Platform(GamePlatform.Pc, GameVersion.RS2014); //FIXME
+                var stream = new MemoryStream();
+                dynamic xmlContent = null;
+                if (this.ArrangementType == ArrangementType.Vocal)
+                    xmlContent = new Vocals(this.Sng2014);
+                else
+                    xmlContent = new Song2014(this.Sng2014, null);
+                xmlContent.Serialize(stream);
+                stream.Seek(0, SeekOrigin.Begin);
+                return new SongXML() { File = this._songXmlFile ?? Path.ChangeExtension(_songXmlFile, ".xml"), Data = stream };    
+                //FIXME -- what if _songXmlFile isn't set?
+            }
+        }
+
         // Song Information
-        public ArrangementType ArrangementType { get; set; }
         public int ArrangementSort { get; set; }
-        public ArrangementName Name { get; set; }
+        public ArrangementName Name { get; private set; }
         public string Tuning { get; set; }
         public TuningStrings TuningStrings { get; set; }
         public double TuningPitch { get; set; }
         public int ScrollSpeed { get; set; }
         public PluckedType PluckedType { get; set; }
         // cache parsing results (speeds up generating for multiple platforms)
-        public Sng2014File Sng2014 { get; set; }
+        public Sng2014File Sng2014 { get; private set; }
         // Gameplay Path
         public RouteMask RouteMask { get; set; }
         public bool BonusArr = false;
+
         // Tone Selector
         public string ToneBase { get; set; }
         public string ToneMultiplayer { get; set; }
@@ -53,49 +85,109 @@ namespace RocksmithToolkitLib.DLCPackage
         public string ToneB { get; set; }
         public string ToneC { get; set; }
         public string ToneD { get; set; }
+
+        public List<Tone2014> Tones { get; set; }
+
         // DLC ID
         public Guid Id { get; set; }
         public int MasterId { get; set; }
 
-        public Arrangement()
+        public static Arrangement Read(Attributes2014 attr, Platform platform, string filename, Stream data = null)
         {
-            Id = IdGenerator.Guid();
-            MasterId = ArrangementType == Sng.ArrangementType.Vocal ? 1 : RandomGenerator.NextInt();
+            Arrangement result = null;
+            using (var str = data ?? File.OpenRead(filename))
+            {
+                switch (Path.GetExtension(filename))
+                {
+                    case ".xml":
+                        Sng2014File xml = null;
+                        if (((ArrangementName)attr.ArrangementType) == ArrangementName.Vocals)
+                            xml = Sng2014FileWriter.ReadVocals(data);
+                        else
+                            xml = Sng2014File.ConvertXML(str);
+                        result = new Arrangement(attr, xml);
+                        result._songXmlFile = filename;
+                        break;
+                    case ".sng":
+                        result = new Arrangement(attr, Sng2014File.ReadSng(str, platform));
+                        result._songFileFile = filename;
+                        break;
+                    default:
+                        throw new Exception("Unknown file type: " + filename);
+                }
+            }
+            return result;
+        }
+        
+        public ArrangementType ArrangementType
+        {
+            get
+            {
+                switch (Name)
+                {
+                    case ArrangementName.Bass:
+                        return Sng.ArrangementType.Bass;
+                    case ArrangementName.Vocals:
+                        return Sng.ArrangementType.Vocal;
+                    default:
+                        return Sng.ArrangementType.Guitar;
+                }
+            }
         }
 
-        public Arrangement(Attributes2014 attr, string xmlSongFile, Stream xmlSongData)// FIXME : this(attr, Sng2014File.ConvertXML(xmlSongData))
-        {
-            this.SongFile = new SongFile();
-            this.SongFile.File = "";
+        private Arrangement(Attributes2014 attr, Sng2014File song) {
+            this.ArrangementSort = attr.ArrangementSort;
+            this.Sng2014 = song;
+            this.Name = (ArrangementName)Enum.Parse(typeof(ArrangementName), attr.ArrangementName);
+            this.ScrollSpeed = 20;
+            this.Id = IdGenerator.Guid();
+            this.MasterId = ArrangementType == Sng.ArrangementType.Vocal ? 1 : RandomGenerator.NextInt();
 
-            this.SongXml = new SongXML();
-            this.SongXml.File = xmlSongFile;
-
+            if (this.ArrangementType == ArrangementType.Vocal)
+            {
+                this.Tones = new List<Tone2014>();
+            } else
+            {
+                ParseTuning(this, attr);
+                ParseTones(this, attr);
+            }
         }
 
-        public Arrangement(Attributes2014 attr, Sng2014File song) {
-           
+        private static void ParseTones(Arrangement dest, Attributes2014 attr)
+        {
+            dest.ScrollSpeed = Convert.ToInt32(attr.DynamicVisualDensity.Last() * 10);
+            dest.PluckedType = (PluckedType)attr.ArrangementProperties.BassPick;
+            dest.RouteMask = (RouteMask)attr.ArrangementProperties.RouteMask;
+            dest.BonusArr = attr.ArrangementProperties.BonusArr == 1;
+            dest.ToneBase = attr.Tone_Base;
+            dest.ToneMultiplayer = attr.Tone_Multiplayer;
+            dest.ToneA = attr.Tone_A;
+            dest.ToneB = attr.Tone_B;
+            dest.ToneC = attr.Tone_C;
+            dest.ToneD = attr.Tone_D;
+            dest.Tones = attr.Tones.ToList();
+        }
+
+        private static void ParseTuning(Arrangement dest, Attributes2014 attr)
+        {
             bool isBass = false;
             TuningDefinition tuning = null;
-            switch ((ArrangementName)attr.ArrangementType)
-	        {
-                case ArrangementName.Lead:
-                case ArrangementName.Rhythm:
-                case ArrangementName.Combo:
-                    this.ArrangementType = Sng.ArrangementType.Guitar;
-                    tuning = TuningDefinitionRepository.Instance().Select(attr.Tuning, GameVersion.RS2014);
-                    break;
+            switch (dest.Name)
+            {
                 case ArrangementName.Bass:
-                    this.ArrangementType = Sng.ArrangementType.Bass;
                     tuning = TuningDefinitionRepository.Instance().SelectForBass(attr.Tuning, GameVersion.RS2014);
                     isBass = true;
                     break;
                 case ArrangementName.Vocals:
-                    this.ArrangementType = Sng.ArrangementType.Vocal;
                     break;
-	        }
-            
-            if (tuning == null) {
+                default:
+                    tuning = TuningDefinitionRepository.Instance().Select(attr.Tuning, GameVersion.RS2014);
+                    break;
+
+            }
+
+            if (tuning == null)
+            {
                 tuning = new TuningDefinition();
                 tuning.UIName = tuning.Name = TuningDefinition.NameFromStrings(attr.Tuning, isBass);
                 tuning.Custom = true;
@@ -103,28 +195,11 @@ namespace RocksmithToolkitLib.DLCPackage
                 tuning.Tuning = attr.Tuning;
                 TuningDefinitionRepository.Instance().Add(tuning, true);
             }
-            this.Tuning = tuning.UIName;
-            this.TuningStrings = tuning.Tuning;
+            dest.Tuning = tuning.UIName;
+            dest.TuningStrings = tuning.Tuning;
 
             if (attr.CentOffset != null)
-                this.TuningPitch = attr.CentOffset.Cents2Frequency();
-
-            this.ArrangementSort = attr.ArrangementSort;
-            this.Name = (ArrangementName)Enum.Parse(typeof(ArrangementName), attr.ArrangementName);
-            this.ScrollSpeed = Convert.ToInt32(attr.DynamicVisualDensity.Last() * 10);
-            this.PluckedType = (PluckedType)attr.ArrangementProperties.BassPick;
-            this.RouteMask = (RouteMask)attr.ArrangementProperties.RouteMask;
-            this.BonusArr = attr.ArrangementProperties.BonusArr == 1;
-            this.ToneBase = attr.Tone_Base;
-            this.ToneMultiplayer = attr.Tone_Multiplayer;
-            this.ToneA = attr.Tone_A;
-            this.ToneB = attr.Tone_B;
-            this.ToneC = attr.Tone_C;
-            this.ToneD = attr.Tone_D;
-            this.Sng2014 = song;
-
-            this.Id = Guid.Parse(attr.PersistentID);
-            this.MasterId = attr.MasterID_RDV;
+                dest.TuningPitch = attr.CentOffset.Cents2Frequency();
         }
 
         public override string ToString()

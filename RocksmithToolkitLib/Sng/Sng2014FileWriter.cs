@@ -126,7 +126,7 @@ namespace RocksmithToolkitLib.Sng2014HSL
 
         // Easy, Medium, Hard = 0, 1, 2
         public int[] NoteCount { get; set; }
-        private int getNoteCount(Sng2014File sng, int Level)
+        public static int GetNoteCount(Sng2014File sng, int Level)
         {
             // time => note count
             var notes = new Dictionary<float,int>();
@@ -159,9 +159,9 @@ namespace RocksmithToolkitLib.Sng2014HSL
         private void parseMetadata(Song2014 xml, Sng2014File sng, Int16[] tuning) {
             // Easy, Medium, Hard
             NoteCount = new int[3];
-            NoteCount[0] = getNoteCount(sng, 0);
-            NoteCount[1] = getNoteCount(sng, 1);
-            NoteCount[2] = getNoteCount(sng, 2);
+            NoteCount[0] = GetNoteCount(sng, 0);
+            NoteCount[1] = GetNoteCount(sng, 1);
+            NoteCount[2] = GetNoteCount(sng, 2);
 
             sng.Metadata = new Metadata();
             sng.Metadata.MaxScore = 100000;

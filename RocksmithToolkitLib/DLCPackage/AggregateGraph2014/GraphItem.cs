@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -75,8 +75,8 @@ namespace RocksmithToolkitLib.DLCPackage.AggregateGraph {
                         LLID = Guid.Parse(value);
                         break;
                     case "logpath":
-                        LogPathDirectory = Canonical;
-                        LogPathFile = value.Substring(Canonical.Length + 1);
+                        LogPathDirectory = Path.GetDirectoryName(value);
+                        LogPathFile = Path.GetFileName(value);
                         break;
                 }
             }

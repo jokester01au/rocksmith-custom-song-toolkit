@@ -1,27 +1,21 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.IO;
 using X360.STFS;
 using System.Text.RegularExpressions;
 using RocksmithToolkitLib.Extensions;
 using RocksmithToolkitLib.DLCPackage.Manifest.Tone;
 using RocksmithToolkitLib.DLCPackage.Manifest;
-using RocksmithToolkitLib.DLCPackage.AggregateGraph;
-using RocksmithToolkitLib.Sng;
-using RocksmithToolkitLib.Ogg;
 using RocksmithToolkitLib.PSARC;
 using System.Xml.Serialization;
+using RocksmithToolkitLib.DLCPackage.AggregateGraph;
+using RocksmithToolkitLib.Ogg;
 
-using System.Drawing;
-using System.Drawing.Imaging;
-using RocksmithToolkitLib.Sng2014HSL;
-using RocksmithToolkitLib.Xml;
 
 namespace RocksmithToolkitLib.DLCPackage
 {
-    public class DLCPackageData
+    public class DLCPackageData : IDisposable
     {
         public GameVersion GameVersion;
         
@@ -34,16 +28,32 @@ namespace RocksmithToolkitLib.DLCPackage
         public string AppId { get; set; }
         public string Name { get; set; }
         public SongInfo SongInfo { get; set; }
-        public string AlbumArtPath { get; set; }
-		public bool IsOgg { get; set; }
-		public string AudioPath { get; set; }
-		public string AudioPreviewPath { get; set; }
-        public List<Arrangement> Arrangements { get; set; }
+        public bool IsOgg { get; set; }
+        public Stream Audio
+        {
+            get { 
+                if (_Audio == null)
+                    ParseAudioFiles();
+                return _Audio;
+            }
+            set { _Audio = value; }
+        }
+		public Stream AudioPreview{
+            get { 
+                if (_Audio == null)
+                    ParseAudioFiles();
+                return _Audio;
+            }
+            set { _Audio = value; }
+        }
         public float Volume { get; set; }
+        public int AverageTempo { get; set; }
         public PackageMagic SignatureType { get; set; }
         public string PackageVersion { get; set; }
 		public List<Manifest.ChordTemplate> Chords { get; set; }
-        public Platform targetPlatform { get; set;}
+        public Platform Platform { get; set;}
+        public AggregateGraph2014 AggregateGraph { get; set; }
+
         private List<XBox360License> xbox360Licenses = null;
         public List<XBox360License> XBox360Licenses
         {
@@ -68,153 +78,150 @@ namespace RocksmithToolkitLib.DLCPackage
 
         #region RS2014 only
 
-        public List<Tone2014> TonesRS2014 { get; set; }
         public float? PreviewVolume { get; set; }
-        
-        // Cache art image conversion
-        public List<DDSConvertedFile> ArtFiles { get; set; }
 
-        public string LyricsTex { get; set; }
+        private PSARC.PSARC Archive;
+        private Dictionary<object, Entry> _entries = new Dictionary<object, Entry>();
+        private List<Arrangement> _Arrangements;
+        private List<AlbumArt> _AlbumArt;
+        private Stream _Audio;
+        private Stream _AudioPreview;
 
-		private class FileEntry {
-			public String Path { get; set; }
-			public Stream Data { get; set; }
-			public FileEntry (String path, Stream data) {
-				Path = path;
-				Data = data;
-			}
-		}
-		public static DLCPackageData Load(string unpackedDirOrPsarc, Platform targetPlatform) {
-            //Load files
-			var files = new Dictionary<string, FileEntry> ();
-			if (unpackedDirOrPsarc.EndsWith(".psarc")) {
-				var archive = new PSARC.PSARC();
-				using (FileStream fileStream = File.OpenRead(unpackedDirOrPsarc))
-				{
-					archive.Read((Stream) fileStream);
-				}
-				files = archive.Entries.ToDictionary( e => Path.GetFileName(e.Name), e => new FileEntry(e.Name, e.Data));
+        public DLCPackageData() {
 
-                // TEMPORARY HACK -- dds uses a separate process so we need to save these files somewhere for it to get to them
-                foreach (var ddsFile in files.Where(f => f.Key.EndsWith(".dds")).Select(kv => kv.Value)) {
-                    using (var tempFile = new FileStream(Path.GetTempFileName(), FileMode.Create, FileAccess.ReadWrite, FileShare.Read, 4096))
-                    {
-                        ddsFile.Data.CopyTo(tempFile);
-                        ddsFile.Path = tempFile.Name;
-                    }
-                }
-			} else {
-				files = Directory.GetFiles(unpackedDirOrPsarc, "*.*", SearchOption.AllDirectories).ToDictionary(f => Path.GetFileName(f), f => new FileEntry( f, File.OpenRead(f)));
-			}
+        }
+		public DLCPackageData(string filename, Platform targetPlatform = null) {
+            
+            this.BasePath = filename;
+            this.Archive = new PSARC.PSARC();
 
-            var data = new DLCPackageData();
-            data.SignatureType = PackageMagic.CON;
-            data.targetPlatform = targetPlatform;
+            using (var fs = File.OpenRead(this.BasePath))
+                this.Archive.Read(fs);
 
-			//Get Arrangements / Tones
-            data.Arrangements = new List<Arrangement>();
-            data.TonesRS2014 = new List<Tone2014>();
+            this.SignatureType = PackageMagic.CON;
+            this.Platform = targetPlatform ?? Packer.TryGetPlatformByEndName(filename);
 
-			foreach (var json in files.Where(kv => kv.Key.EndsWith( ".json")).Select(kv => kv.Value.Data)) {
-				Attributes2014 attr = Manifest2014<Attributes2014>.LoadFromFile(json).Entries.ToArray()[0].Value.ToArray()[0].Value;
-				FileEntry xmlFile = null;
-				files.TryGetValue (attr.SongXml.Split(':')[3] + ".xml", out xmlFile);
-                FileEntry sngFile = null;
-                files.TryGetValue(attr.SongXml.Split(':')[3] + ".sng", out sngFile);
+            var aggregate = this.Archive.Entries.Single(e => e.Name.EndsWith("aggregategraph.nt"));
+            this.AggregateGraph = AggregateGraph2014.LoadFromFile(aggregate.Data);
+            _entries[this.AggregateGraph] = aggregate;
 
-				AddArrangement (data, attr, xmlFile, sngFile);
-            }
+            var appid = this.Archive.Entries.Single(e => e.Name.Equals("/appid.appid"));
+            using (var r = new StreamReader(appid.Data))
+                this.AppId = r.ReadToEnd();
+            _entries[this.AppId] = appid;
 
-            //Get Files
-			var art = files.FirstOrDefault (kv => kv.Key.EndsWith ("_256.dds")).Value;
-			if (art != null) {
-				data.AlbumArtPath = art.Path; 
-			}
-			var targetAudioFiles = files.Where (kv => kv.Key.EndsWith (".wem")).OrderByDescending(kv => ((FileStream)kv.Value.Data).Length).Select(kv => kv.Key); // FIXME(jtk) don't really want to have to assume FileStream here
-//                var newFile = Path.Combine(Path.GetDirectoryName(file), String.Format("{0}_fixed{1}", Path.GetFileNameWithoutExtension(file), Path.GetExtension(file)));
-//                if (targetPlatform.IsConsole != file.GetAudioPlatform().IsConsole)
-//                {
-//                    OggFile.ConvertAudioPlatform(file, newFile);
-//                    targetAudioFiles.Add(newFile);
-//                }
-//                else 
-//					targetAudioFiles.Add(file);
-//            }
-
-            if (targetAudioFiles.Count() <= 0)
-                throw new InvalidDataException("Audio files not found.");
-
-			data.AudioPath = targetAudioFiles.First();
-			data.AudioPreviewPath = targetAudioFiles.LastOrDefault ();
-            //Make Audio preview with expected name when rebuild
-			// FIXME(jtk) -- move to somewhere else
-//            if (!String.IsNullOrEmpty(audioPreviewPath)) {
-//                var newPreviewFileName = Path.Combine(Path.GetDirectoryName(audioPath), String.Format("{0}_preview{1}", Path.GetFileNameWithoutExtension(audioPath), Path.GetExtension(audioPath)));
-//                File.Move(audioPreviewPath, newPreviewFileName);
-//				data.AudioPreviewPath = newPreviewFileName;
-//            }
-
-			data.AppId = files.FirstOrDefault(kv => kv.Key.StartsWith(".appid")).Key; // FIXME(jtk) -- get data not file
-            return data;
+            ParseBaseData();
         }
 
-		private static void AddArrangement (DLCPackageData data , Attributes2014 attr, FileEntry xmlFile, FileEntry sngFile)
-		{
-			if (attr.Phrases != null) {
-				if (data.SongInfo == null) {
-					// Fill Package Data
-					data.Name = attr.DLCKey;
-					data.Volume = attr.SongVolume;
-					data.PreviewVolume = (attr.PreviewVolume != null) ? (float)attr.PreviewVolume : data.Volume;
-					// Fill SongInfo
-					data.SongInfo = new SongInfo ();
-					data.SongInfo.SongDisplayName = attr.SongName;
-					data.SongInfo.SongDisplayNameSort = attr.SongNameSort;
-					data.SongInfo.Album = attr.AlbumName;
-					data.SongInfo.SongYear = attr.SongYear ?? 0;
-					data.SongInfo.Artist = attr.ArtistName;
-					data.SongInfo.ArtistSort = attr.ArtistNameSort;
-					data.SongInfo.AverageTempo = (int)attr.SongAverageTempo;
-					data.Difficulty = attr.SongDifficulty;
-					data.Chords = attr.ChordTemplates;
-                    data.SongLength = attr.SongLength;
+        public List<Arrangement> Arrangements
+        {
+            get {
+                if (this._Arrangements == null) {
+                    this._Arrangements = new List<Arrangement>();
+                    foreach (var json in this.AggregateGraph.JsonDB)
+                    {
+                        var jsonEntry = Archive.Entries.Single(e => e.Name.Equals(json.RelPath));
+                        var attr = Manifest2014<Attributes2014>.LoadFromFile(jsonEntry.Data).Entries.ToArray()[0].Value.ToArray()[0].Value;
 
-				}
-				// Adding Tones
-				foreach (var jsonTone in attr.Tones) {
-					if (jsonTone == null)
-						continue;
-					if (!data.TonesRS2014.OfType<Tone2014> ().Any (t => t.Key == jsonTone.Key))
-						data.TonesRS2014.Add (jsonTone);
-				}
-                if (sngFile != null)
+                        var sngFile = AggregateGraph.MusicgameSong.Where(s => s.Name.Equals(json.Name))
+                                           .Concat(AggregateGraph.SongXml.Where(x => x.Name.Equals(json.Name)))
+                                           .First();
+                        var sngEntry = Archive.Entries.Single(e => e.Name.Equals(sngFile.RelPath));
+
+                        var arr = Arrangement.Read(attr, Platform, sngEntry.Name, sngEntry.Data);
+                        this._entries[arr] = jsonEntry;
+                        this._entries[arr.Sng2014] = sngEntry;
+
+                        this._Arrangements.Add(arr);
+                    }
+                }
+                return this._Arrangements;
+            }
+        }
+
+        public List<Tone2014> TonesRS2014
+        {
+            get
+            {
+                return this.Arrangements.SelectMany(a => a.Tones).Distinct(new PropertyComparer<Tone2014>("Key")).ToList();
+            }
+        }
+
+        public List<AlbumArt> AlbumArt
+        {
+            get
+            {
+                if (_AlbumArt == null)
                 {
-                    data.Arrangements.Add(new Arrangement(attr, Sng2014File.ReadSng(sngFile.Data, data.targetPlatform)));
+                    _AlbumArt = AggregateGraph.ImageArt.Select(ia => new AlbumArt(ia.getEntry(Archive).Data)).ToList();
                 }
-				else if (xmlFile != null) {
-					// Adding Arrangement
-					data.Arrangements.Add (new Arrangement (attr, xmlFile.Path, xmlFile.Data)); // FIXME -- we wont have a song
+                return _AlbumArt;
+            }
+        }
+
+        private string _AudioFile;
+
+        public string TempAudioFile
+        {
+            get
+            {
+                if (_AudioFile == null)
+                {
+                    _AudioFile = GeneralExtensions.GetTempFileName(".ogg");
+                    using (var fs = File.OpenWrite(_AudioFile))
+                        Audio.CopyTo(fs);
                 }
-                
-			}
-			else {
-				var voc = new Arrangement ();
-				voc.Name = ArrangementName.Vocals;
-				voc.ArrangementType = ArrangementType.Vocal;
-				voc.SongXml = new SongXML {
-					File = (xmlFile == null ? "" : xmlFile.Path)
-				};
-				voc.SongFile = new SongFile {
-					File = ""
-				};
-				if (xmlFile != null) {
-					voc.Sng2014 = Sng2014HSL.Sng2014FileWriter.ReadVocals(xmlFile.Data);
-				}
-				voc.ScrollSpeed = 20;
-				// Adding Arrangement
-				data.Arrangements.Add (voc);
-			}
-		}
+                return _AudioFile;
+            }
+        }
+        private void ParseAudioFiles()
+        {
+            var oggFiles = Archive.Entries.Where(e => e.Name.EndsWith(".ogg")).OrderByDescending(e => e.Data.Length);
+            if (oggFiles.Count() > 0)
+            {
+                Audio = oggFiles.First().Data;
+                if (oggFiles.Count() > 1)
+                    _AudioPreview = oggFiles.Last().Data;
+                return;
+            }
+
+            var wemFiles = Archive.Entries.Where(e => e.Name.EndsWith(".wem")).OrderByDescending(e => e.Data.Length);
+            if (oggFiles.Count() > 0)
+            {
+                _Audio = OggFile.ConvertOgg(oggFiles.First().Data);
+                if (oggFiles.Count() > 1)
+                    _AudioPreview = OggFile.ConvertOgg(oggFiles.Last().Data);
+                return;
+            }
+
+            throw new InvalidDataException("Audio files not found.");
+        }
+
+		private void ParseBaseData ()
+		{
+            var attr = AggregateGraph.JsonDB.Select(j => j.getManifest(Archive)).First(m => m.SongName != null);
+			this.Name = attr.DLCKey;
+			this.SongInfo = new SongInfo ();
+			this.SongInfo.SongDisplayName = attr.SongName;
+			this.SongInfo.SongDisplayNameSort = attr.SongNameSort;
+            this.SongInfo.Album = attr.AlbumName;
+            this.SongInfo.AlbumSort = attr.AlbumNameSort;
+            this.SongInfo.SongYear = attr.SongYear ?? 0;
+			this.SongInfo.Artist = attr.ArtistName;
+			this.SongInfo.ArtistSort = attr.ArtistNameSort;
+			this.SongInfo.AverageTempo = (int)attr.SongAverageTempo;
+            
+            // FIXME these should aggregate
+            this.Volume = attr.SongVolume;
+            this.PreviewVolume = (attr.PreviewVolume != null) ? (float)attr.PreviewVolume : this.Volume;
+            this.Difficulty = attr.SongDifficulty;
+			this.Chords = attr.ChordTemplates;
+            this.SongLength = attr.SongLength ?? 0;
+        }
+
+        public IDictionary<string, Entry> OtherEntries { get { 
+            return Archive.Entries.ToDictionary(e => e.Name, e => e);  
+        } } // TODO -- filter to unrecognized ones
 
         #endregion
 
@@ -227,21 +234,19 @@ namespace RocksmithToolkitLib.DLCPackage
 
         // needs to be called after all packages for platforms are created
         public void CleanCache() {
-            if (ArtFiles != null) {
-                foreach (var file in ArtFiles) {
-                    try {
-                        File.Delete(file.destinationFile);
-                    } catch { }
-                }
-                ArtFiles = null;
-            }
-
+            
             if (Arrangements != null)
                 foreach (var a in Arrangements)
                     a.CleanCache();
+
+            if (_AudioFile != null)
+            {
+                File.Delete(_AudioFile);
+                _AudioFile = null;
+            }
         }
 
-        ~DLCPackageData()
+        public void Dispose()
         {
             CleanCache();
         }
@@ -334,6 +339,36 @@ namespace RocksmithToolkitLib.DLCPackage
         }
 
         public double? Difficulty { get; set; }
+
+        public Stream Showlights
+        {
+            get
+            {
+                var showlights = this.Archive.Entries.SingleOrDefault(e => e.Name.Equals(AggregateGraph.ShowlightXml.RelPath));
+                if (showlights == null)
+                    return null;
+
+                _entries[showlights.Data] = showlights;
+                return showlights.Data;
+            }
+ }
+
+        public Stream LyricsTex
+        {
+            get
+            {
+                var lyrics = this.Archive.Entries.SingleOrDefault(e => e.Name.Equals(AggregateGraph.LyricsTex.RelPath));
+                if (lyrics == null)
+                    return null;
+
+                _entries[lyrics.Data] = lyrics;
+                return lyrics.Data;
+            }
+        }
+
+        public string BasePath { get; private set; }
+
+        public string Digest { get { return Archive.Digest; } }
     }
 
     public class DDSConvertedFile {
@@ -354,5 +389,19 @@ namespace RocksmithToolkitLib.DLCPackage
         public InlayData() {
             Id = IdGenerator.Guid();
         }
+    }
+
+    public static class HelperExtensions
+    {
+        public static Entry getEntry(this GraphItem gi, PSARC.PSARC archive)
+        {
+            return archive.Entries.Single(e => e.Name.Equals(gi.RelPath));
+        }
+
+        public static Attributes2014 getManifest(this GraphItem jsonItem, PSARC.PSARC archive)
+        {
+            return Manifest2014<Attributes2014>.LoadFromFile(jsonItem.getEntry(archive).Data).Entries.ToArray()[0].Value.ToArray()[0].Value;
+        }
+
     }
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
@@ -85,8 +85,10 @@ namespace RocksmithToolkitLib.DLCPackage
 
         #region PACKAGE
 
-        public static void Generate(string packagePath, DLCPackageData info, Platform platform, DLCPackageType dlcType = DLCPackageType.Song)
+        public static void Generate(string packagePath, DLCPackageData info, Platform platform = null, DLCPackageType dlcType = DLCPackageType.Song)
         {
+            if (platform == null)
+                platform = Packer.TryGetPlatformByEndName(packagePath);
             switch (platform.platform)
             {
                 case GamePlatform.XBox360:
@@ -291,7 +293,7 @@ namespace RocksmithToolkitLib.DLCPackage
         private static void GenerateRS2014SongPsarc(MemoryStream output, DLCPackageData info, Platform platform)
         {
             var dlcName = info.Name.ToLower();
-            
+            /*
             {
                 var packPsarc = new PSARC.PSARC();
 
@@ -303,12 +305,12 @@ namespace RocksmithToolkitLib.DLCPackage
 
                 try {
                     // ALBUM ART
-                    var ddsfiles = info.ArtFiles; // FIXME -- use streams
+                    var ddsfiles = info.ArtFiles; 
 
                     if (ddsfiles == null) {
                         string albumArtPath;
-                        if (File.Exists(info.AlbumArtPath)) {
-                            albumArtPath = info.AlbumArtPath;
+                        if (info.AlbumArt != null) {
+                            albumArtPath = info.AlbumArt.Path;
                         } else {
                             using (var albumArtStream = new MemoryStream(Resources.albumart2014_256))
                             {
@@ -327,33 +329,33 @@ namespace RocksmithToolkitLib.DLCPackage
                         ToDDS(ddsfiles);
 
                         // Save for reuse
-                        info.ArtFiles = ddsfiles;
+                        //info.ArtFiles = ddsfiles;
                     }
 
                     foreach (var dds in ddsfiles)
                         packPsarc.AddEntry(String.Format("gfxassets/album_art/album_{0}_{1}.dds", dlcName, dds.sizeX), new FileStream(dds.destinationFile, FileMode.Open, FileAccess.Read, FileShare.Read));
 
                     //Lyrics Font Texture
-                    if (File.Exists(info.LyricsTex))
-                        packPsarc.AddEntry(String.Format("assets/ui/lyrics/{0}/lyrics_{0}.dds", dlcName), new FileStream(info.LyricsTex, FileMode.Open, FileAccess.Read, FileShare.Read));
+                    if (info.LyricsTex != null)
+                        packPsarc.AddEntry(String.Format("assets/ui/lyrics/{0}/lyrics_{0}.dds", dlcName), info.LyricsTex.Data);
 
                     // AUDIO
-					var audioFile = info.AudioPath;
-                    if (File.Exists(audioFile))
-					if (platform.IsConsole != audioFile.GetAudioPlatform().IsConsole && info.IsOgg)
-                            soundStream = OggFile.ConvertAudioPlatform(audioFile);
+					var audioFile = info.Audio;
+                    if (audioFile != null)
+					if (platform.IsConsole != audioFile.Data.GetAudioPlatform().IsConsole && info.IsOgg)
+                            soundStream = OggFile.ConvertAudioPlatform(audioFile.Data);
                         else
-                            soundStream = File.OpenRead(audioFile);
+                            soundStream = audioFile.Data;
                     else
                         throw new InvalidOperationException(String.Format("Audio file '{0}' not found.", audioFile));
 
                     // AUDIO PREVIEW
-					var previewAudioFile = info.AudioPreviewPath;
-                    if (File.Exists(previewAudioFile))
-					if (platform.IsConsole != previewAudioFile.GetAudioPlatform().IsConsole && info.IsOgg)
-                            soundPreviewStream = OggFile.ConvertAudioPlatform(previewAudioFile);
+					var previewAudioFile = info.AudioPreview;
+                    if (previewAudioFile != null)
+					if (platform.IsConsole != previewAudioFile.Data.GetAudioPlatform().IsConsole && info.IsOgg)
+                            soundPreviewStream = OggFile.ConvertAudioPlatform(previewAudioFile.Data);
                         else
-                            soundPreviewStream = File.OpenRead(previewAudioFile);
+                            soundPreviewStream = previewAudioFile.Data;
                     else
                         soundPreviewStream = soundStream;
 
@@ -431,15 +433,10 @@ namespace RocksmithToolkitLib.DLCPackage
 
                             // GAME SONG (SNG)
                             UpdateToneDescriptors(info);
-                            GenerateSNG(arrangement, platform);
-                            var sngSongFile = File.OpenRead(arrangement.SongFile.File);
-                            arrangementStream.Add(sngSongFile);
-                            packPsarc.AddEntry(String.Format("songs/bin/{0}/{1}_{2}.sng", platform.GetPathName()[1].ToLower(), dlcName, arrangementFileName), sngSongFile);
+                            packPsarc.AddEntry(String.Format("songs/bin/{0}/{1}_{2}.sng", platform.GetPathName()[1].ToLower(), dlcName, arrangementFileName), arrangement.SongFile.Data);
 
                             // XML SONG
-                            var xmlSongFile = File.OpenRead(arrangement.SongXml.File);
-                            arrangementStream.Add(xmlSongFile);
-                            packPsarc.AddEntry(String.Format("songs/arr/{0}_{1}.xml", dlcName, arrangementFileName), xmlSongFile);
+                           packPsarc.AddEntry(String.Format("songs/arr/{0}_{1}.xml", dlcName, arrangementFileName), arrangement.SongXml.Data);
 
                             // MANIFEST
                             var manifest = new Manifest2014<Attributes2014>();
@@ -507,8 +504,7 @@ namespace RocksmithToolkitLib.DLCPackage
                         output.Seek(0, SeekOrigin.Begin);
                         output.WriteTmpFile(String.Format("{0}.psarc", dlcName), platform);
                     }
-                } catch (Exception ex) {
-                    throw ex;
+
                 } finally {
                     // Dispose all objects
                     if (soundStream != null)
@@ -522,15 +518,15 @@ namespace RocksmithToolkitLib.DLCPackage
                     DeleteTmpFiles(TMPFILES_SNG);
                     DeleteTmpFiles(TMPFILES_ART);
                 }
-            }
+            }*/
         }
 
         private static void GenerateRS2014InlayPsarc(MemoryStream output, DLCPackageData info, Platform platform) {
             var dlcName = info.Inlay.DLCSixName;
 // TODO updateProgress remotely from here 
-            {
+            /*{
                 var packPsarc = new PSARC.PSARC();
-
+                
                 // Stream objects
                 Stream rsenumerableRootStream = null,
                        rsenumerableGuitarStream = null;
@@ -676,7 +672,7 @@ namespace RocksmithToolkitLib.DLCPackage
                         rsenumerableGuitarStream.Dispose();
                     DeleteTmpFiles(TMPFILES_ART);
                 }
-            }
+            }*/
         }
 
         #endregion
@@ -684,7 +680,7 @@ namespace RocksmithToolkitLib.DLCPackage
         #region Generate PSARC RS1
 
         private static void GeneratePsarcsForRS1(Stream output, DLCPackageData info, Platform platform)
-        {
+        {/*
             IList<Stream> toneStreams = new List<Stream>();
             using (var toolkitVersionStream = new MemoryStream())
             using (var appIdStream = new MemoryStream())
@@ -755,20 +751,20 @@ namespace RocksmithToolkitLib.DLCPackage
                         catch { }
                     }
                 }
-            }
+            }*/
         }
 
         private static void GenerateSongPsarcRS1(Stream output, DLCPackageData info, Platform platform) {
             var soundBankName = String.Format("Song_{0}", info.Name);
-
+            /*
             try
             {
                 Stream albumArtStream = null,
                        audioStream = null;
 
                 string albumArtPath;
-                if (File.Exists(info.AlbumArtPath)) {
-                    albumArtPath = info.AlbumArtPath;
+                if (info.AlbumArt != null) {
+                    albumArtPath = info.AlbumArt.Path;
                 } else {
                     using (var defaultArtStream = new MemoryStream(Resources.albumart)) {
                         albumArtPath = GeneralExtensions.GetTempFileName(".dds");
@@ -791,12 +787,12 @@ namespace RocksmithToolkitLib.DLCPackage
                 albumArtStream = new FileStream(ddsfiles[0].destinationFile, FileMode.Open, FileAccess.Read, FileShare.Read);
 
                 // AUDIO
-				var audioFile = info.AudioPath;
-                if (File.Exists(audioFile))
-                    if (platform.IsConsole != audioFile.GetAudioPlatform().IsConsole)
-                        audioStream = OggFile.ConvertAudioPlatform(audioFile);
+				var audioFile = info.Audio;
+                if (audioFile != null)
+                    if (platform.IsConsole != audioFile.Data.GetAudioPlatform().IsConsole)
+                        audioStream = OggFile.ConvertAudioPlatform(audioFile.Data);
                     else
-                        audioStream = File.OpenRead(audioFile);
+                        audioStream = audioFile.Data;
                 else
                     throw new InvalidOperationException(String.Format("Audio file '{0}' not found.", audioFile));
 
@@ -810,7 +806,7 @@ namespace RocksmithToolkitLib.DLCPackage
                     var manifestBuilder = new ManifestBuilder {
                         AggregateGraph = new AggregateGraph.AggregateGraph {
                             SoundBank = new SoundBank { File = soundBankName + ".bnk" },
-                            AlbumArt = new AlbumArt { File = info.AlbumArtPath }
+                            AlbumArt = new AlbumArt { File = info.AlbumArt.Path, Data = info.AlbumArt.Data }
                         }
                     };
 
@@ -868,7 +864,7 @@ namespace RocksmithToolkitLib.DLCPackage
             }
             finally
             {
-            }
+            }*/
         }
 
         private static void GeneratePackageList(Stream output, string dlcName) {
@@ -986,20 +982,12 @@ namespace RocksmithToolkitLib.DLCPackage
                     SngFileWriter.Write(arrangement.SongXml.File, sngFile, arrangement.ArrangementType, platform);
                     break;
                 case GameVersion.RS2014:
-                    if (arrangement.Sng2014 == null) {
-                        // Sng2014File can be reused when generating for multiple platforms
-                        // cache results
-                        arrangement.Sng2014 = Sng2014File.ConvertXML(arrangement.SongXml.File, arrangement.ArrangementType);
-                    }
-                    using (FileStream fs = new FileStream(sngFile, FileMode.Create))
+                    using (FileStream fs = new FileStream(arrangement.SongFile.File, FileMode.Create))
                         arrangement.Sng2014.WriteSng(fs, platform);
                     break;
                 default:
                     throw new InvalidOperationException("Unexpected game version value");
             }
-
-            if (arrangement.SongFile == null)
-                arrangement.SongFile = new SongFile { File = "" };
             arrangement.SongFile.File = Path.GetFullPath(sngFile);
 
             TMPFILES_SNG.Add(sngFile);

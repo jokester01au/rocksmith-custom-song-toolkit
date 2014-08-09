@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -182,7 +182,8 @@ namespace RocksmithToolkitLib.Xml {
                 SongLength = sngData.Metadata.SongLength;
                 Tuning = new TuningStrings(sngData.Metadata.Tuning);
                 Capo = (sngData.Metadata.CapoFretId >= 0) ? sngData.Metadata.CapoFretId : (byte)0;
-                LastConversionDateTime = sngData.Metadata.LastConversionDateTime.ToNullTerminatedAscii();                
+                LastConversionDateTime = sngData.Metadata.LastConversionDateTime.ToNullTerminatedAscii();
+                ArrangementProperties = new SongArrangementProperties2014();
             }
 
             Tones = (attr != null) ? SongTone2014.Parse(sngData.Tones, attr) : SongTone2014.Parse(sngData.Tones);
@@ -233,6 +234,7 @@ namespace RocksmithToolkitLib.Xml {
 		}
 
 		public static Song2014 LoadFromFile(Stream xmlSongRS2014Stream) {
+            xmlSongRS2014Stream.Seek(0, SeekOrigin.Begin);
 			using (var reader = new StreamReader(xmlSongRS2014Stream))
             {
                 return new XmlStreamingDeserializer<Song2014>(reader).Deserialize();
