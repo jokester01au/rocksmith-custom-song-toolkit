@@ -737,7 +737,8 @@ public class SectionSection
     public string[] order { get { return this._order; } }
     public void read(BinaryReader r) {
         this.Count = r.ReadInt32();
-        this.Sections = new Section[this.Count]; for (int i=0; i<this.Count; i++) { Section obj = new Section(); obj.read(r); this.Sections[i] = obj; }
+        this.Sections = new Section[this.Count]; 
+        for (int i=0; i<this.Count; i++) { Section obj = new Section(); obj.read(r); this.Sections[i] = obj; }
     }
 }
 

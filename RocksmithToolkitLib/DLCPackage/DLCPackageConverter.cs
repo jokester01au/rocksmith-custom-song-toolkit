@@ -108,12 +108,12 @@ namespace RocksmithToolkitLib.DLCPackage
 
         private static void ConvertPackageRebuilding(string unpackedDir, string targetFileName, Platform targetPlatform, string appId)
         {
-            var data = DLCPackageData.Load(unpackedDir, targetPlatform);
+            var data = new DLCPackageData(unpackedDir, targetPlatform);
             if (!targetPlatform.IsConsole)
                 data.AppId = appId;
 
             //Build
-            RocksmithToolkitLib.DLCPackage.DLCPackageCreator.Generate(targetFileName, data, new Platform(targetPlatform.platform, GameVersion.RS2014));
+            RocksmithToolkitLib.DLCPackage.DLCPackageCreator.Generate(data, platform: new Platform(targetPlatform.platform, GameVersion.RS2014));
         }
     }
 }

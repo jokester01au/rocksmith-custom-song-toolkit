@@ -32,8 +32,7 @@ namespace RocksmithToolkitLib.DLCPackage
 
     public class Arrangement
     {
-        private string _songFileFile = null;
-        private string _songXmlFile = null;
+        private string _songFilename = null;
 
         public SongFile SongFile
         {
@@ -42,7 +41,7 @@ namespace RocksmithToolkitLib.DLCPackage
                 var platform = new Platform(GamePlatform.Pc, GameVersion.RS2014); //FIXME
                 var stream = new MemoryStream();
                 Sng2014.WriteSng(stream, platform);
-                return new SongFile() { File = _songFileFile ?? Path.ChangeExtension(_songXmlFile, ".sng"), Data = stream };               
+                return new SongFile() { File = Path.ChangeExtension(_songFilename, ".sng"), Data = stream };               
             }            
         }
 
@@ -59,8 +58,8 @@ namespace RocksmithToolkitLib.DLCPackage
                     xmlContent = new Song2014(this.Sng2014, null);
                 xmlContent.Serialize(stream);
                 stream.Seek(0, SeekOrigin.Begin);
-                return new SongXML() { File = this._songXmlFile ?? Path.ChangeExtension(_songXmlFile, ".xml"), Data = stream };    
-                //FIXME -- what if _songXmlFile isn't set?
+                return new SongXML() { File = Path.ChangeExtension(_songFilename, ".xml"), Data = stream };    
+               
             }
         }
 
@@ -92,7 +91,7 @@ namespace RocksmithToolkitLib.DLCPackage
         public Guid Id { get; set; }
         public int MasterId { get; set; }
 
-        public static Arrangement Read(Attributes2014 attr, Platform platform, string filename, Stream data = null)
+        public static Arrangement Read(Attributes2014 attr, Platform platform, Guid id, string filename, Stream data = null)
         {
             Arrangement result = null;
             using (var str = data ?? File.OpenRead(filename))
@@ -105,16 +104,16 @@ namespace RocksmithToolkitLib.DLCPackage
                             xml = Sng2014FileWriter.ReadVocals(data);
                         else
                             xml = Sng2014File.ConvertXML(str);
-                        result = new Arrangement(attr, xml);
-                        result._songXmlFile = filename;
+                        result = new Arrangement(attr, xml, id);
                         break;
                     case ".sng":
-                        result = new Arrangement(attr, Sng2014File.ReadSng(str, platform));
-                        result._songFileFile = filename;
+                        result = new Arrangement(attr, Sng2014File.ReadSng(str, platform), id);
                         break;
                     default:
                         throw new Exception("Unknown file type: " + filename);
                 }
+                result._songFilename = filename;
+                        
             }
             return result;
         }
@@ -135,12 +134,12 @@ namespace RocksmithToolkitLib.DLCPackage
             }
         }
 
-        private Arrangement(Attributes2014 attr, Sng2014File song) {
+        private Arrangement(Attributes2014 attr, Sng2014File song, Guid id) {
             this.ArrangementSort = attr.ArrangementSort;
             this.Sng2014 = song;
             this.Name = (ArrangementName)Enum.Parse(typeof(ArrangementName), attr.ArrangementName);
             this.ScrollSpeed = 20;
-            this.Id = IdGenerator.Guid();
+            this.Id = id;
             this.MasterId = ArrangementType == Sng.ArrangementType.Vocal ? 1 : RandomGenerator.NextInt();
 
             if (this.ArrangementType == ArrangementType.Vocal)
@@ -230,5 +229,7 @@ namespace RocksmithToolkitLib.DLCPackage
             Sng2014 = null;
         }
 
+
+        public string SongFilePath { get { return Path.ChangeExtension(this._songFilename, ".sng"); } }
     }
 }

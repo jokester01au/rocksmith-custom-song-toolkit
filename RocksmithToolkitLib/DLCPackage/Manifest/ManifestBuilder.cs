@@ -65,7 +65,7 @@ namespace RocksmithToolkitLib.DLCPackage.Manifest
                     attribute.FirstArrangementInSong = true;
                 }
                 attribute.ForceUseXML = true;
-                attribute.Genre = "PLACEHOLDER Genre";
+                attribute.Tag = "PLACEHOLDER Tag";
                 attribute.InputEvent = isVocal ? "Play_Tone_Standard_Mic" : "Play_Tone_";
                 attribute.IsDemoSong = false;
                 attribute.IsDLC = true;

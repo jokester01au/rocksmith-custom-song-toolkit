@@ -33,7 +33,7 @@ namespace RocksmithToolkitLib.DLCPackage.Manifest
         public bool FifthsAndOctaves { get; set; }
         public bool ForceUseXML { get; set; }
         public bool FretHandMutes { get; set; }
-        public string Genre { get; set; }
+        public string Tag { get; set; }
         public bool Harmonics { get; set; }
         public bool HOPOs { get; set; }
         public string InputEvent { get; set; }

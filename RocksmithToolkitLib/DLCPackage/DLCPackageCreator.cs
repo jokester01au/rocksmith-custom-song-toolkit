@@ -85,10 +85,13 @@ namespace RocksmithToolkitLib.DLCPackage
 
         #region PACKAGE
 
-        public static void Generate(string packagePath, DLCPackageData info, Platform platform = null, DLCPackageType dlcType = DLCPackageType.Song)
+        public static void Generate(DLCPackageData info, string outputPath = null, Platform platform = null, DLCPackageType dlcType = DLCPackageType.Song)
         {
+            if (outputPath == null)
+                outputPath = info.BasePath;
+
             if (platform == null)
-                platform = Packer.TryGetPlatformByEndName(packagePath);
+                platform = Packer.TryGetPlatformByEndName(outputPath);
             switch (platform.platform)
             {
                 case GamePlatform.XBox360:
@@ -125,9 +128,9 @@ namespace RocksmithToolkitLib.DLCPackage
                         throw new InvalidOperationException("Unexpected game version value");
                 }
 
-                var packageName = Path.GetFileNameWithoutExtension(packagePath).StripPlatformEndName();
+                var packageName = Path.GetFileNameWithoutExtension(outputPath).StripPlatformEndName();
 
-                var songFileName = String.Format("{0}{1}", Path.Combine(Path.GetDirectoryName(packagePath), packageName), platform.GetPathName()[2]);
+                var songFileName = String.Format("{0}{1}", Path.Combine(Path.GetDirectoryName(outputPath), packageName), platform.GetPathName()[2]);
                                 
                 switch (platform.platform)
                 {
@@ -293,7 +296,7 @@ namespace RocksmithToolkitLib.DLCPackage
         private static void GenerateRS2014SongPsarc(MemoryStream output, DLCPackageData info, Platform platform)
         {
             var dlcName = info.Name.ToLower();
-            /*
+    
             {
                 var packPsarc = new PSARC.PSARC();
 
@@ -305,7 +308,7 @@ namespace RocksmithToolkitLib.DLCPackage
 
                 try {
                     // ALBUM ART
-                    var ddsfiles = info.ArtFiles; 
+                   /* var ddsfiles = info.ArtFiles; 
 
                     if (ddsfiles == null) {
                         string albumArtPath;
@@ -504,7 +507,7 @@ namespace RocksmithToolkitLib.DLCPackage
                         output.Seek(0, SeekOrigin.Begin);
                         output.WriteTmpFile(String.Format("{0}.psarc", dlcName), platform);
                     }
-
+                    */
                 } finally {
                     // Dispose all objects
                     if (soundStream != null)
@@ -518,7 +521,7 @@ namespace RocksmithToolkitLib.DLCPackage
                     DeleteTmpFiles(TMPFILES_SNG);
                     DeleteTmpFiles(TMPFILES_ART);
                 }
-            }*/
+            }
         }
 
         private static void GenerateRS2014InlayPsarc(MemoryStream output, DLCPackageData info, Platform platform) {

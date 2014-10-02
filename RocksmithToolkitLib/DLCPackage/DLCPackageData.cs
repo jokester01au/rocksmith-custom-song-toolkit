@@ -128,7 +128,7 @@ namespace RocksmithToolkitLib.DLCPackage
                                            .First();
                         var sngEntry = Archive.Entries.Single(e => e.Name.Equals(sngFile.RelPath));
 
-                        var arr = Arrangement.Read(attr, Platform, sngEntry.Name, sngEntry.Data);
+                        var arr = Arrangement.Read(attr, Platform, sngFile.LLID, sngEntry.Name, sngEntry.Data);
                         this._entries[arr] = jsonEntry;
                         this._entries[arr.Sng2014] = sngEntry;
 

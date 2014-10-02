@@ -33,7 +33,7 @@ namespace RocksmithToolkitLib
               return false;
             }
 
-        public static void RemoveDifficulty(Sng2014File sng, int overlap)
+        public static void RemoveDifficulty(Sng2014File sng, int overlap = -1)
         {
             if (sng.Vocals.Count <= 0)
             {
@@ -42,6 +42,17 @@ namespace RocksmithToolkitLib
                 //else
                  DifficultyRemover.CreateNddArrangement(sng, overlap);
             }
+        }
+
+        public static void RemoveDifficulty(string filename, int overlap = -1)
+        {
+            var data = new DLCPackageData(filename);
+
+            foreach (var arrangement in data.Arrangements)
+            {
+                RemoveDifficulty(arrangement.Sng2014, overlap);
+            }
+            DLCPackageCreator.Generate(data);
         }
 
         private void  CreateNddArrangement(Sng2014File inp)

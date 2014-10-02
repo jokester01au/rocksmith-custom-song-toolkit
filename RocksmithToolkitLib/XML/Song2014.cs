@@ -241,19 +241,30 @@ namespace RocksmithToolkitLib.Xml {
             }
         }
 
-        public void Serialize(Stream stream) {
+        private void DoSerialize(dynamic output) {
             XmlSerializerNamespaces ns = new XmlSerializerNamespaces();
             ns.Add("", "");
 
-            using (var writer = XmlWriter.Create(stream, new XmlWriterSettings {
+            using (var writer = XmlWriter.Create(output, new XmlWriterSettings
+            {
                 Indent = true,
                 OmitXmlDeclaration = true
             })) {
                 new XmlSerializer(typeof(Song2014)).Serialize(writer, this, ns);
             }
+        }
 
+        public void Serialize(Stream stream) {
+            DoSerialize(stream);
             stream.Flush();
             stream.Seek(0, SeekOrigin.Begin);
+        }
+
+        public string Serialize()
+        {
+            var builder = new StringBuilder();
+            DoSerialize(builder);
+            return builder.ToString();
         }
     }
 
